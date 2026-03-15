@@ -15,6 +15,7 @@ A forma mais rápida de verificar é usando a extensão **Metrito Pixel Helper**
 3. Procure o badge **Metrito** no canto inferior esquerdo da página
 
 Se o badge aparecer, o pixel foi detectado. Clique no ícone da extensão para ver:
+
 - ID do contêiner
 - Dados do lead (após envio de formulário)
 - Domínio sendo rastreado
@@ -24,22 +25,24 @@ Se o badge aparecer, o pixel foi detectado. Clique no ícone da extensão para v
 Abra as Ferramentas de Desenvolvedor (`F12` ou `Cmd+Shift+I`) e verifique:
 
 **Aba Console** — Confirme que a função de rastreamento existe:
+
 ```javascript
-typeof window.mtrt // deve retornar "function"
+typeof window.mtrt; // deve retornar "function"
 ```
 
 **Aba Rede (Network)** — Filtre por `mtrt` ou `metrito` e procure por:
+
 - Uma requisição para `mtrttag.js` (script de rastreamento sendo carregado)
 - Requisições `POST` para o seu subdomínio SST ou `api.metrito.com` quando eventos forem disparados
 
 **Aba Aplicativo (Application)** > **Armazenamento local (Local Storage)** — Verifique as chaves do Metrito:
 
-| Chave | Indica |
-|-------|--------|
-| `metrito_lead_id` ou `mtrt_lead_id` | Um lead foi identificado |
-| `metrito_lead_email` | E-mail do lead está salvo |
-| `metrito_lead_phone` | Telefone do lead está salvo |
-| `metrito_lead_name` | Nome do lead está salvo |
+| Chave                               | Indica                      |
+| ----------------------------------- | --------------------------- |
+| `metrito_lead_id` ou `mtrt_lead_id` | Um lead foi identificado    |
+| `metrito_lead_email`                | E-mail do lead está salvo   |
+| `metrito_lead_phone`                | Telefone do lead está salvo |
+| `metrito_lead_name`                 | Nome do lead está salvo     |
 
 ### Método 3: Verificar o Código-Fonte da Página
 
@@ -131,11 +134,13 @@ No painel, acesse:
 **Sintomas:** Nenhum badge Metrito, nenhuma função `mtrt` no console, nenhuma requisição na aba Rede.
 
 **Causas:**
+
 - Tag de script não adicionada à página
 - Subdomínio SST incorreto no snippet
 - Política de Segurança de Conteúdo (CSP) bloqueando o script
 
 **Solução:**
+
 1. Veja o código-fonte da página e procure por `mtrt`
 2. Se estiver ausente, adicione o snippet à tag `<head>`
 3. Se estiver presente mas bloqueado, verifique os cabeçalhos CSP do site. Pode ser necessário adicionar seu subdomínio SST à diretiva `script-src`
@@ -158,7 +163,7 @@ No painel, acesse:
 
 **Causa:** Extensões de bloqueio de anúncios podem bloquear requisições para domínios de rastreamento conhecidos.
 
-**Solução:** Use o subdomínio dedicado (SST) com seu próprio domínio. Requisições para `sst.seudominio.com.br` não são bloqueadas por extensões de anúncio, pois aparecem como requisições de primeira parte.
+**Solução:** Use o subdomínio dedicado (SST) com seu próprio domínio. Requisições para `sst.seudominio.com.br` não são bloqueadas por bloqueadores de anúncio e IOS pois aparecem como requisições de primeira parte.
 
 </Accordion>
 
@@ -173,6 +178,7 @@ No painel, acesse:
 **Causa:** Modelo UTM não configurado na plataforma de anúncios, ou configurado no nível errado.
 
 **Solução:**
+
 1. Verifique se o modelo UTM está salvo no Gerenciador de Anúncios da Meta (Campanha > Editar > Rastreamento > Parâmetros de URL)
 2. Certifique-se de que os parâmetros dinâmicos usam chaves duplas: `{{campaign.id}}` e não `{campaign.id}`
 3. Visualize a URL do anúncio para confirmar que os parâmetros estão sendo adicionados
@@ -184,6 +190,7 @@ No painel, acesse:
 **Causa:** Um encurtador de URL, serviço de redirecionamento ou CDN está removendo os parâmetros de query.
 
 **Solução:**
+
 1. Teste colando a URL completa (com UTMs) diretamente no navegador
 2. Verifique se suas regras de redirecionamento preservam os parâmetros de query
 3. Se estiver usando um construtor de landing pages, confirme que ele não remove parâmetros desconhecidos
@@ -195,6 +202,7 @@ No painel, acesse:
 **Causa:** O padrão UTM usa apenas IDs, ou a configuração de posição dos campos está incorreta.
 
 **Solução:**
+
 1. Verifique se os parâmetros de URL do Meta Ads incluem `{{campaign.name}}` antes de `{{campaign.id}}`
 2. Confirme com o time Metrito se a configuração de posição do nome está correta para o seu contêiner
 
@@ -267,6 +275,7 @@ Sem `config.facebook`, os eventos são rastreados no Metrito mas não encaminhad
 **Causa:** Nenhum identificador compartilhado entre os canais. A unificação de identidade requer pelo menos um elo em comum (e-mail, telefone ou ID de sessão).
 
 **Solução:**
+
 1. Colete e-mail ou telefone em ambos os canais
 2. Use `wa_session` para conexão WhatsApp → web
 3. O sistema unifica os perfis automaticamente quando identificadores compartilhados são detectados
@@ -281,25 +290,19 @@ Use esta lista para verificar sua configuração sistematicamente:
 
 <Steps>
 
-<Step title="Pixel instalado">
-  Extensão Pixel Helper mostra badge verde no seu site. `window.mtrt` retorna `"function"` no console.
-</Step>
+<Step title="Pixel instalado">Extensão Pixel Helper mostra badge verde no seu site. `window.mtrt` retorna `"function"` no console.</Step>
 
 <Step title="Eventos disparando">
   Aba Rede mostra requisições POST para o seu subdomínio SST quando ações ocorrem. Status da resposta é `200` ou `204`.
 </Step>
 
-<Step title="UTMs capturados">
-  Acesse seu site com parâmetros UTM. Verifique cookies/localStorage com os valores UTM armazenados.
-</Step>
+<Step title="UTMs capturados">Acesse seu site com parâmetros UTM. Verifique cookies/localStorage com os valores UTM armazenados.</Step>
 
 <Step title="Leads identificados">
   Envie um formulário com e-mail/telefone. Verifique no localStorage as chaves `metrito_lead_id` e `metrito_lead_email`.
 </Step>
 
-<Step title="Painel mostrando dados">
-  Eventos aparecem no painel do Metrito com atribuição de campanha e dados de lead corretos.
-</Step>
+<Step title="Painel mostrando dados">Eventos aparecem no painel do Metrito com atribuição de campanha e dados de lead corretos.</Step>
 
 <Step title="Eventos Meta encaminhados">
   Eventos com `config.facebook.name` aparecem no Gerenciador de Eventos da Meta (pode levar 5-20 minutos).

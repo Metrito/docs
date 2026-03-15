@@ -17,18 +17,25 @@ Diferente de ferramentas básicas de analytics, o Metrito:
 
 ## Conceitos Fundamentais
 
-### Contêiner
+### Projeto
 
-Um **contêiner** é o espaço dedicado ao seu negócio dentro do Metrito. Todos os seus dados de rastreamento, fontes e destinos ficam organizados dentro dele.
+Um **projeto** representa a sua marca dentro do Metrito — é onde ficam todas as configurações do seu negócio: moeda, fuso horário, domínios, integrações de rastreamento e destinos de conversão.
 
-| Propriedade | Descrição |
-|-------------|-----------|
-| **ID do Contêiner** | Identificador único no formato `MTC-XXXXXXX` |
-| **Domínio** | O(s) domínio(s) do site associado ao contêiner |
-| **Fontes** | De onde vêm os eventos (pixel, Shopify, WhatsApp, API) |
-| **Destinos** | Para onde os eventos são enviados (Meta CAPI, Google Ads, TikTok) |
+| Propriedade                         | Descrição                                                         |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| **ID do Container de Rastreamento** | Identificador único no formato `MTC-XXXXXXX`                      |
+| **Moeda**                           | Moeda padrão usada nos relatórios e conversões (ex: BRL, USD)     |
+| **Fuso Horário**                    | Fuso horário do negócio para atribuição e relatórios              |
+| **Domínio(s)**                      | O(s) domínio(s) do site associado ao projeto                      |
+| **Fontes**                          | De onde vêm os eventos (pixel, Shopify, WhatsApp, API)            |
+| **Destinos**                        | Para onde os eventos são enviados (Meta CAPI, Google Ads, TikTok) |
 
-Cada evento, lead e sessão pertence a exatamente um contêiner. Os dados nunca se misturam entre contêineres diferentes.
+Cada evento, lead e sessão pertence a exatamente um projeto. Os dados nunca se misturam entre projetos diferentes.
+
+<Note>
+  Internamente, o projeto também é chamado de **contêiner** — você verá esse termo na documentação técnica e na API. O ID no formato
+  `MTC-XXXXXXX` identifica o seu projeto em todos os lugares.
+</Note>
 
 ### Eventos
 
@@ -42,7 +49,7 @@ Um **evento** é uma ação individual do usuário: visualização de página, e
     "facebook": { "name": "Purchase" }
   },
   "data": {
-    "value": 299.90,
+    "value": 299.9,
     "currency": "BRL"
   },
   "lead": {
@@ -68,6 +75,7 @@ Um mesmo usuário que visita seu site na segunda-feira e volta na quinta-feira t
 Uma **jornada** representa o caminho completo de um usuário pelo seu funil de marketing, abrangendo múltiplas sessões ao longo de dias ou semanas.
 
 Características principais:
+
 - Pode começar de forma **anônima** (apenas um identificador de navegador)
 - Torna-se **identificada** quando e-mail ou telefone é capturado
 - Registra atribuição de **primeiro toque** e **último toque**
@@ -124,15 +132,15 @@ flowchart LR
 
 Com o pixel do Metrito instalado, os seguintes dados são coletados sem nenhuma configuração adicional:
 
-| Dado | Origem |
-|------|--------|
-| URL, título e referenciador da página | Navegador |
-| Parâmetros UTM (`utm_source`, `utm_campaign`, etc.) | Query string da URL |
-| IDs de clique das plataformas (`fbclid`, `gclid`, `ttclid`) | Query string da URL |
-| Parâmetros personalizados (`src`, `sck`) | Query string da URL |
-| Cookies do navegador (`_fbp`, `_ga`) | Cookies de primeira parte |
-| Tipo de dispositivo, navegador e SO | User-Agent |
-| Geolocalização (país, cidade, região) | IP do usuário |
+| Dado                                                        | Origem                    |
+| ----------------------------------------------------------- | ------------------------- |
+| URL, título e referenciador da página                       | Navegador                 |
+| Parâmetros UTM (`utm_source`, `utm_campaign`, etc.)         | Query string da URL       |
+| IDs de clique das plataformas (`fbclid`, `gclid`, `ttclid`) | Query string da URL       |
+| Parâmetros personalizados (`src`, `sck`)                    | Query string da URL       |
+| Cookies do navegador (`_fbp`, `_ga`)                        | Cookies de primeira parte |
+| Tipo de dispositivo, navegador e SO                         | User-Agent                |
+| Geolocalização (país, cidade, região)                       | IP do usuário             |
 
 ## Próximos Passos
 

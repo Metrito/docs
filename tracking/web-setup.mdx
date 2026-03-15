@@ -19,53 +19,101 @@ Adicione o snippet abaixo em todas as páginas do seu site, preferencialmente de
 <CodeGroup>
 
 ```html Com subdomínio dedicado (Recomendado)
+<!-- Metrito Tracking Code -->
 <script>
-(function(w,d,u,h,k){var o="mtrt";w[o]=w[o]||function(){
-(w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
-var s=d.createElement("script");s.async=1;
-s.src=h+"/${o}tag.js";d.head.appendChild(s)
-})(window,document,new URL(location),"https://sst.seudominio.com.br","MTC-XXXXXXX");
+  !(function (m, e, T, r, i, t, o) {
+    o || (o = "mtrt");
+    if (m[o]) return;
+    t || (T.host = "sst." + T.host);
+    i = `/${o}tag.js?id=` + (T.searchParams.get(o + "id") || i);
+    [T.searchParams.get(o + "url") || t || T.origin, r].reduce(
+      (a, b) =>
+        a.catch(
+          () =>
+            new Promise((y, n) => {
+              t = e.createElement("script");
+              t.src = b + i;
+              t.async = !0;
+              t.onload = y;
+              t.onerror = n;
+              e.body.appendChild(t);
+            }),
+        ),
+      Promise.reject(),
+    );
+    o = m[o] = function () {
+      o.track ? o.track.apply(o, arguments) : o.queue.push(arguments);
+    };
+    o.ver = 1;
+    o.queue = [];
+  })(window, document, new URL(location), "https://api.metrito.com/v2", "MTC-XXXXXXX", "https://sst.seudominio.com.br");
 </script>
+<!-- End Metrito Tracking Code -->
 ```
 
 ```html Via Metrito (Alternativo)
+<!-- Metrito Tracking Code -->
 <script>
-(function(w,d,u,h,k){var o="mtrt";w[o]=w[o]||function(){
-(w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
-var s=d.createElement("script");s.async=1;
-s.src=h+"/${o}tag.js";d.head.appendChild(s)
-})(window,document,new URL(location),"https://api.metrito.com/v2","MTC-XXXXXXX");
+  !(function (m, e, T, r, i, t, o) {
+    o || (o = "mtrt");
+    if (m[o]) return;
+    t || (T.host = "sst." + T.host);
+    i = `/${o}tag.js?id=` + (T.searchParams.get(o + "id") || i);
+    [T.searchParams.get(o + "url") || t || T.origin, r].reduce(
+      (a, b) =>
+        a.catch(
+          () =>
+            new Promise((y, n) => {
+              t = e.createElement("script");
+              t.src = b + i;
+              t.async = !0;
+              t.onload = y;
+              t.onerror = n;
+              e.body.appendChild(t);
+            }),
+        ),
+      Promise.reject(),
+    );
+    o = m[o] = function () {
+      o.track ? o.track.apply(o, arguments) : o.queue.push(arguments);
+    };
+    o.ver = 1;
+    o.queue = [];
+  })(window, document, new URL(location), "https://api.metrito.com/v2", "MTC-XXXXXXX");
 </script>
+<!-- End Metrito Tracking Code -->
 ```
 
 </CodeGroup>
 
 Substitua estes valores:
 
-| Placeholder | Substituir por |
-|-------------|----------------|
-| `sst.seudominio.com.br` | Seu subdomínio de rastreamento |
-| `MTC-XXXXXXX` | O ID do contêiner da plataforma Metrito |
+| Placeholder             | Substituir por                                               |
+| ----------------------- | ------------------------------------------------------------ |
+| `MTC-XXXXXXX`           | O ID do projeto da plataforma Metrito                        |
+| `sst.seudominio.com.br` | Seu subdomínio de rastreamento (fornecido pelo time Metrito) |
 
 <Info>
-O **subdomínio dedicado** é a configuração recomendada. Ele roteia os eventos de rastreamento por um subdomínio do seu próprio domínio (ex: `sst.seudominio.com.br`), o que evita bloqueios por extensões de anúncio e melhora a confiabilidade dos cookies. O time Metrito configura esse subdomínio para você durante o onboarding.
+  O **subdomínio dedicado** é a configuração recomendada. Ele roteia os eventos de rastreamento por um subdomínio do seu próprio domínio
+  (ex: `sst.seudominio.com.br`), o que evita bloqueios por extensões de anúncio e melhora a confiabilidade dos cookies. O time Metrito
+  configura esse subdomínio para você durante o onboarding.
 </Info>
 
 ## O que o Pixel Captura Automaticamente
 
 Após a instalação, o script coleta os seguintes dados em cada carregamento de página — sem nenhum código adicional:
 
-| Dado | Como é capturado |
-|------|-----------------|
-| **URL** e **título** da página | `window.location` e `document.title` |
-| **Referenciador** | `document.referrer` |
-| **Parâmetros UTM** | Query string da URL, armazenados em cookie para persistência na sessão |
-| **IDs de clique** (`fbclid`, `gclid`, `ttclid`) | Query string da URL |
-| **Parâmetros personalizados** (`src`, `sck`) | Query string da URL |
-| **Cookies do navegador** (`_fbp`, `_ga`) | `document.cookie` |
-| **Idioma** | `navigator.language` |
-| **Dispositivo e navegador** | User-Agent |
-| **Geolocalização** | IP do usuário (país, cidade, região, CEP) |
+| Dado                                            | Como é capturado                                                       |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| **URL** e **título** da página                  | `window.location` e `document.title`                                   |
+| **Referenciador**                               | `document.referrer`                                                    |
+| **Parâmetros UTM**                              | Query string da URL, armazenados em cookie para persistência na sessão |
+| **IDs de clique** (`fbclid`, `gclid`, `ttclid`) | Query string da URL                                                    |
+| **Parâmetros personalizados** (`src`, `sck`)    | Query string da URL                                                    |
+| **Cookies do navegador** (`_fbp`, `_ga`)        | `document.cookie`                                                      |
+| **Idioma**                                      | `navigator.language`                                                   |
+| **Dispositivo e navegador**                     | User-Agent                                                             |
+| **Geolocalização**                              | IP do usuário (país, cidade, região, CEP)                              |
 
 Os parâmetros UTM são automaticamente salvos em cookie para persistir entre páginas. Todos os eventos subsequentes na mesma sessão incluem os UTMs da entrada original.
 
@@ -83,13 +131,13 @@ Use a função `mtrt()` para rastrear eventos personalizados. Os campos mínimos
 mtrt("send", {
   domain: "sujaloja.com.br",
   config: {
-    name: "Lead"
+    name: "Lead",
   },
   lead: {
     name: "João Silva",
     email: "joao@exemplo.com",
-    phone: "+5511999999999"
-  }
+    phone: "+5511999999999",
+  },
 });
 ```
 
@@ -101,28 +149,26 @@ Quando um usuário preencher um formulário, identifique-o passando os dados de 
 mtrt("send", {
   domain: "sujaloja.com.br",
   config: {
-    name: "FormularioEnviado"
+    name: "FormularioEnviado",
   },
   lead: {
     name: "Maria Santos",
     email: "maria@exemplo.com",
-    phone: "+5511888888888"
-  }
+    phone: "+5511888888888",
+  },
 });
 ```
 
 O objeto `lead` aceita os seguintes campos:
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | string | ID explícito do lead (gerado automaticamente se omitido) |
-| `name` | string | Nome completo |
-| `email` | string | Endereço de e-mail |
-| `phone` | string | Telefone no formato E.164 (ex: `+5511999999999`) |
+| Campo   | Tipo   | Descrição                                                |
+| ------- | ------ | -------------------------------------------------------- |
+| `id`    | string | ID explícito do lead (gerado automaticamente se omitido) |
+| `name`  | string | Nome completo                                            |
+| `email` | string | Endereço de e-mail                                       |
+| `phone` | string | Telefone no formato E.164 (ex: `+5511999999999`)         |
 
-<Tip>
-Você não precisa enviar `lead.id` — o Metrito gera um ID único automaticamente quando um novo lead é detectado.
-</Tip>
+<Tip>Você não precisa enviar `lead.id` — o Metrito gera um ID único automaticamente quando um novo lead é detectado.</Tip>
 
 ### Eventos de Compra
 
@@ -134,17 +180,17 @@ mtrt("send", {
   config: {
     name: "Compra",
     facebook: {
-      name: "Purchase"
-    }
+      name: "Purchase",
+    },
   },
   data: {
-    value: 299.90,
-    currency: "BRL"
+    value: 299.9,
+    currency: "BRL",
   },
   lead: {
     email: "cliente@exemplo.com",
-    phone: "+5511999999999"
-  }
+    phone: "+5511999999999",
+  },
 });
 ```
 
@@ -152,15 +198,16 @@ mtrt("send", {
 
 Esses campos têm funções diferentes:
 
-| Campo | Utilizado por | Finalidade |
-|-------|---------------|------------|
-| `config.name` | **Metrito** | Nome interno do evento para dashboards e relatórios. Use qualquer nome que faça sentido para você. |
+| Campo                  | Utilizado por                 | Finalidade                                                                                                                                                   |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config.name`          | **Metrito**                   | Nome interno do evento para dashboards e relatórios. Use qualquer nome que faça sentido para você.                                                           |
 | `config.facebook.name` | **Meta (Facebook/Instagram)** | Nome do evento enviado para a API de Conversões da Meta. Deve seguir os [eventos padrão da Meta](https://developers.facebook.com/docs/meta-pixel/reference). |
 
 Nomes de eventos Meta mais comuns: `PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`.
 
 <Warning>
-Se você omitir `config.facebook`, o evento é registrado no Metrito mas **não** é enviado para a Meta. Sempre inclua-o nos eventos que você quer otimizar no Meta Ads.
+  Se você omitir `config.facebook`, o evento é registrado no Metrito mas **não** é enviado para a Meta. Sempre inclua-o nos eventos que você
+  quer otimizar no Meta Ads.
 </Warning>
 
 ## Instalação por Plataforma

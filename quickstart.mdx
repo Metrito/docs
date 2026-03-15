@@ -25,20 +25,47 @@ Um **contêiner** é o espaço dedicado ao seu negócio dentro do Metrito. Ele o
 Adicione o script do Metrito em todas as páginas do seu site, antes do fechamento da tag `</head>`:
 
 ```html
+<!-- Metrito Tracking Code -->
 <script>
-(function(w,d,u,h,k){var o="mtrt";w[o]=w[o]||function(){
-(w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
-var s=d.createElement("script");s.async=1;
-s.src=h+"/${o}tag.js";d.head.appendChild(s)
-})(window,document,new URL(location),"https://sst.seudominio.com.br","MTC-XXXXXXX");
+  !(function (m, e, T, r, i, t, o) {
+    o || (o = "mtrt");
+    if (m[o]) return;
+    t || (T.host = "sst." + T.host);
+    i = `/${o}tag.js?id=` + (T.searchParams.get(o + "id") || i);
+    [T.searchParams.get(o + "url") || t || T.origin, r].reduce(
+      (a, b) =>
+        a.catch(
+          () =>
+            new Promise((y, n) => {
+              t = e.createElement("script");
+              t.src = b + i;
+              t.async = !0;
+              t.onload = y;
+              t.onerror = n;
+              e.body.appendChild(t);
+            }),
+        ),
+      Promise.reject(),
+    );
+    o = m[o] = function () {
+      o.track ? o.track.apply(o, arguments) : o.queue.push(arguments);
+    };
+    o.ver = 1;
+    o.queue = [];
+  })(window, document, new URL(location), "https://api.metrito.com/v2", "MTC-XXXXXXX", "https://sst.seudominio.com.br");
 </script>
+<!-- End Metrito Tracking Code -->
 ```
 
 Substitua:
-- `sst.seudominio.com.br` pelo seu subdomínio de rastreamento (fornecido pelo time Metrito)
-- `MTC-XXXXXXX` pelo ID do seu contêiner
 
-<Info>O pixel captura automaticamente: visualizações de página, parâmetros UTM, referenciador, cookies (`_fbp`, `_ga`) e informações do dispositivo.</Info>
+- `MTC-XXXXXXX` pelo ID do seu projeto
+- `sst.seudominio.com.br` pelo seu subdomínio de rastreamento (fornecido pelo time Metrito)
+
+<Info>
+  O pixel captura automaticamente: visualizações de página, parâmetros UTM, referenciador, cookies (`_fbp`, `_ga`) e informações do
+  dispositivo.
+</Info>
 
 Veja o guia completo em [Instalação do Pixel Web](/tracking/web-setup).
 
