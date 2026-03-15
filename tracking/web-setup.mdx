@@ -1,0 +1,223 @@
+---
+title: "Web Pixel Setup"
+description: "Install the Metrito tracking script on your website to capture events and attribute conversions"
+icon: "code"
+---
+
+## Prerequisites
+
+Before installing the pixel, make sure you have:
+
+1. A Metrito account with access to the [Dashboard](https://app.metrito.com)
+2. A **Tracking Container** created for your domain (you'll need the `MTC-XXXXXXX` ID)
+3. Access to edit your website's HTML (or your tag manager)
+
+## Install the Tracking Script
+
+Add the following snippet to every page of your website, ideally inside the `<head>` tag before the closing `</head>`:
+
+<CodeGroup>
+
+```html Server-Side Tagging (Recommended)
+<script>
+(function(w,d,u,h,k){var o="mtrt";w[o]=w[o]||function(){
+(w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
+var s=d.createElement("script");s.async=1;
+s.src=h+"/${o}tag.js";d.head.appendChild(s)
+})(window,document,new URL(location),"https://sst.yourdomain.com","MTC-XXXXXXX");
+</script>
+```
+
+```html Metrito CDN (Fallback)
+<script>
+(function(w,d,u,h,k){var o="mtrt";w[o]=w[o]||function(){
+(w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
+var s=d.createElement("script");s.async=1;
+s.src=h+"/${o}tag.js";d.head.appendChild(s)
+})(window,document,new URL(location),"https://api.metrito.com/v2","MTC-XXXXXXX");
+</script>
+```
+
+</CodeGroup>
+
+Replace these values:
+
+| Placeholder | Replace with |
+|-------------|-------------|
+| `sst.yourdomain.com` | Your server-side tagging subdomain |
+| `MTC-XXXXXXX` | Your container ID from the Metrito dashboard |
+
+<Info>
+**Server-side tagging** (SST) is the recommended setup. It routes tracking requests through your own subdomain (`sst.yourdomain.com`), which avoids ad blockers and improves cookie reliability. The Metrito team configures this DNS record for you during onboarding.
+</Info>
+
+## What the Pixel Captures Automatically
+
+Once installed, the script captures the following data on every page load — no additional code required:
+
+| Data | How it's captured |
+|------|-------------------|
+| **Page URL** and **title** | `window.location` and `document.title` |
+| **Referrer** | `document.referrer` |
+| **UTM parameters** | Parsed from URL query string and stored in cookies |
+| **Ad click IDs** (`fbclid`, `gclid`, `ttclid`) | Parsed from URL query string |
+| **Custom params** (`src`, `sck`) | Parsed from URL query string |
+| **Browser cookies** (`_fbp`, `_ga`) | Read from `document.cookie` |
+| **Language** | `navigator.language` |
+| **Device & browser** | User-Agent header (parsed server-side) |
+| **Geolocation** | Cloudflare headers (country, city, region, postal code) |
+
+UTM parameters are automatically persisted in cookies so they survive page navigation. All subsequent events on the same session include the original UTMs.
+
+## Tracking Events
+
+### Automatic Page Views
+
+The pixel fires a `PageView` event automatically on each page load. No manual call is needed.
+
+### Custom Events
+
+Use the `mtrt()` function to track custom events. The minimum required fields are `domain` and `config.name`:
+
+```javascript
+mtrt("send", {
+  domain: "yourstore.com",
+  config: {
+    name: "Lead"
+  },
+  lead: {
+    name: "John Doe",
+    email: "john@example.com",
+    phone: "+5511999999999"
+  }
+});
+```
+
+### Lead Identification
+
+When a user submits a form, identify them by passing lead data:
+
+```javascript
+mtrt("send", {
+  domain: "yourstore.com",
+  config: {
+    name: "FormSubmit"
+  },
+  lead: {
+    name: "Maria Santos",
+    email: "maria@example.com",
+    phone: "+5511888888888"
+  }
+});
+```
+
+The `lead` object supports these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Explicit lead ID (auto-generated if omitted) |
+| `name` | string | Full name |
+| `email` | string | Email address |
+| `phone` | string | Phone in E.164 format (e.g., `+5511999999999`) |
+
+<Tip>
+You don't need to pass `lead.id` — Metrito generates a unique lead ID automatically when a new lead is detected. If `utm_term` starts with `lead_`, that value is used as the lead ID (useful for pre-identified campaign links).
+</Tip>
+
+### Purchase Events
+
+Track purchases with revenue data. Include `config.facebook` to forward the event to Meta's Conversion API:
+
+```javascript
+mtrt("send", {
+  domain: "yourstore.com",
+  config: {
+    name: "Purchase",
+    facebook: {
+      name: "Purchase"
+    }
+  },
+  data: {
+    value: 299.90,
+    currency: "BRL"
+  },
+  lead: {
+    email: "customer@example.com",
+    phone: "+5511999999999"
+  }
+});
+```
+
+### config.name vs config.facebook.name
+
+These serve different purposes:
+
+| Field | Where it's used | What it does |
+|-------|-----------------|--------------|
+| `config.name` | **Metrito** | Internal event name for dashboards and reporting. Use any name that makes sense to you. |
+| `config.facebook.name` | **Meta (Facebook/Instagram)** | Event name sent to Meta Conversion API. Must follow [Meta's standard events](https://developers.facebook.com/docs/meta-pixel/reference). |
+
+Common Meta event names: `PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`.
+
+<Warning>
+If you omit `config.facebook`, the event is tracked in Metrito but **not** forwarded to Meta. Always include it if you want Meta Ads optimization.
+</Warning>
+
+## Platform-Specific Installation
+
+<AccordionGroup>
+
+<Accordion title="WordPress / WooCommerce">
+
+Add the tracking script to your theme's `header.php` file, or use a plugin like **Insert Headers and Footers** to add it to the `<head>` section globally.
+
+</Accordion>
+
+<Accordion title="Shopify">
+
+Go to **Online Store** > **Themes** > **Edit code** > `theme.liquid`. Paste the snippet inside the `<head>` tag.
+
+For Shopify checkout events, Metrito provides a dedicated Shopify pixel integration — contact the Metrito team for setup.
+
+</Accordion>
+
+<Accordion title="Google Tag Manager">
+
+Create a **Custom HTML** tag in GTM, paste the Metrito snippet, and set it to fire on **All Pages**. Make sure "Support document.write" is unchecked.
+
+</Accordion>
+
+<Accordion title="Landing Page Builders (Unbounce, Leadpages, etc.)">
+
+Use the platform's custom script injection feature. Add the Metrito snippet as a **head script** that loads on all pages.
+
+</Accordion>
+
+</AccordionGroup>
+
+## How Lead Data is Stored
+
+When the pixel identifies a lead, it persists data in `localStorage` for session continuity:
+
+| Key | Value |
+|-----|-------|
+| `metrito_lead_id` or `mtrt_lead_id` | Generated lead ID |
+| `metrito_lead_name` | Lead's name |
+| `metrito_lead_email` | Lead's email |
+| `metrito_lead_phone` | Lead's phone |
+
+This data is included automatically in all subsequent events on the same browser, even across page navigations.
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Configure UTMs" icon="bullseye-arrow" href="/tracking/utm-configuration">
+  Set up ad platform URL parameters for campaign attribution.
+</Card>
+
+<Card title="Test Your Setup" icon="bug" href="/tracking/testing">
+  Verify the pixel is working and events are being captured.
+</Card>
+
+</CardGroup>

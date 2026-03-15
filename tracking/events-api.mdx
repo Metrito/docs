@@ -1,0 +1,340 @@
+---
+title: "Events API"
+description: "Send server-side tracking events from any platform using Metrito's public API"
+icon: "terminal"
+---
+
+## Overview
+
+The Events API is a public REST endpoint for sending tracking events from any backend system — e-commerce platforms, CRMs, automation tools (n8n, Make, Zapier), or custom applications.
+
+```
+POST /v2/public/tracking/events
+```
+
+| Property | Value |
+|----------|-------|
+| **Method** | POST |
+| **Authentication** | None (public endpoint) |
+| **Content-Type** | `application/json` |
+| **Base URL** | `https://api.metrito.com` |
+
+<Info>
+The API is public and doesn't require authentication. The `domain` field in the payload identifies the container. Events are processed asynchronously via RabbitMQ — the API responds immediately after queuing.
+</Info>
+
+## Request Schema
+
+### Required Fields
+
+```json
+{
+  "domain": "yourstore.com",
+  "config": {
+    "name": "EventName"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `domain` | string | Domain associated with your tracking container (e.g., `yourstore.com`) or your MTC ID (e.g., `MTC-5X35GWQ`) |
+| `config.name` | string | Event name for Metrito dashboards and reporting |
+
+### Optional Fields
+
+```json
+{
+  "domain": "yourstore.com",
+  "version": 2,
+  "eventId": "custom_event_id_123",
+  "eventTime": 1700000000,
+  "config": {
+    "name": "Purchase",
+    "facebook": {
+      "name": "Purchase"
+    }
+  },
+  "data": {
+    "value": 299.90,
+    "currency": "BRL"
+  },
+  "lead": {
+    "id": "lead_20250920_abc123",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+5511999999999"
+  },
+  "utm": {
+    "utm_source": "facebook",
+    "utm_medium": "cpc",
+    "utm_campaign": "Summer Sale|123456789",
+    "utm_content": "Video Ad|456789",
+    "utm_term": "feed"
+  },
+  "meta": {
+    "url": "https://yourstore.com/checkout/success",
+    "title": "Order Confirmed",
+    "language": "pt-BR",
+    "referrer": "https://yourstore.com/cart"
+  },
+  "cookies": {
+    "_fbp": "fb.1.1234567890.987654321",
+    "_ga": "GA1.2.1234567890.1234567890"
+  }
+}
+```
+
+### Field Reference
+
+<ResponseField name="domain" type="string" required>
+  Domain associated with your tracking container, or the MTC container ID.
+</ResponseField>
+
+<ResponseField name="config" type="object" required>
+  <Expandable title="config">
+    <ResponseField name="name" type="string" required>
+      Event name for Metrito dashboards. Can be any string meaningful to you (e.g., `Lead`, `Purchase`, `FormSubmit`).
+    </ResponseField>
+    <ResponseField name="facebook" type="object">
+      <Expandable title="facebook">
+        <ResponseField name="name" type="string">
+          Event name sent to Meta Conversion API. Must follow Meta's standard events (`PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="eventId" type="string">
+  Unique event ID. Auto-generated as `{timestamp}_{random}` if omitted (e.g., `1758388123_kk78h7u5sf`).
+</ResponseField>
+
+<ResponseField name="eventTime" type="number">
+  Unix timestamp of the event. Defaults to current server time if omitted.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="value" type="number">
+      Monetary value of the event (e.g., `299.90`).
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      ISO 4217 currency code (e.g., `BRL`, `USD`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="lead" type="object">
+  <Expandable title="lead">
+    <ResponseField name="id" type="string">
+      Explicit lead ID. Auto-generated as `lead_{YYYYMMDD}_{random}` if omitted when lead data is present.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Lead's full name.
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Lead's email address.
+    </ResponseField>
+    <ResponseField name="phone" type="string">
+      Lead's phone in E.164 format (e.g., `+5511999999999`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="utm" type="object">
+  <Expandable title="utm">
+    <ResponseField name="utm_source" type="string">Source (e.g., `facebook`, `google`)</ResponseField>
+    <ResponseField name="utm_medium" type="string">Medium (e.g., `cpc`, `email`)</ResponseField>
+    <ResponseField name="utm_campaign" type="string">Campaign (supports `name|id` format)</ResponseField>
+    <ResponseField name="utm_content" type="string">Content (supports `name|id` format)</ResponseField>
+    <ResponseField name="utm_term" type="string">Term or placement. If starts with `lead_`, used as lead ID.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  <Expandable title="meta">
+    <ResponseField name="url" type="string">Page URL where the event occurred</ResponseField>
+    <ResponseField name="title" type="string">Page title</ResponseField>
+    <ResponseField name="language" type="string">Page language</ResponseField>
+    <ResponseField name="referrer" type="string">Referrer URL</ResponseField>
+  </Expandable>
+  Auto-populated from request headers when sent from a browser. When sent from a server, include these explicitly if available.
+</ResponseField>
+
+<ResponseField name="cookies" type="object">
+  Browser cookies for ad platform matching. Common keys: `_fbp` (Meta), `_ga` (Google Analytics), `_fbc` (Meta click).
+</ResponseField>
+
+## Response
+
+### Success (200 OK)
+
+```json
+{
+  "success": true,
+  "eventId": "1758388123_kk78h7u5sf",
+  "leadId": "lead_20250920_xyz789",
+  "timestamp": 1758388123
+}
+```
+
+### Validation Error (400)
+
+```json
+{
+  "message": "Domain is required",
+  "errors": [
+    { "field": "domain", "message": "Domain field is required" }
+  ]
+}
+```
+
+## Code Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.metrito.com/v2/public/tracking/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "yourstore.com",
+    "config": {
+      "name": "Purchase",
+      "facebook": { "name": "Purchase" }
+    },
+    "data": {
+      "value": 299.90,
+      "currency": "BRL"
+    },
+    "lead": {
+      "email": "customer@example.com",
+      "phone": "+5511999999999"
+    }
+  }'
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch(
+  "https://api.metrito.com/v2/public/tracking/events",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      domain: "yourstore.com",
+      config: {
+        name: "Lead",
+        facebook: { name: "Lead" },
+      },
+      lead: {
+        name: "Maria Santos",
+        email: "maria@example.com",
+        phone: "+5511999999999",
+      },
+      utm: {
+        utm_source: "facebook",
+        utm_campaign: "Black Friday|123456",
+      },
+    }),
+  }
+);
+
+const result = await response.json();
+console.log(result.eventId, result.leadId);
+```
+
+```javascript n8n (HTTP Request Node)
+// HTTP Request node configuration:
+// Method: POST
+// URL: https://api.metrito.com/v2/public/tracking/events
+// Body Content Type: JSON
+// Body:
+{
+  "domain": "yourstore.com",
+  "config": {
+    "name": "{{ $json.eventName }}",
+    "facebook": {
+      "name": "{{ $json.facebookEventName }}"
+    }
+  },
+  "data": {
+    "value": "{{ $json.orderValue }}",
+    "currency": "BRL"
+  },
+  "lead": {
+    "name": "{{ $json.customerName }}",
+    "email": "{{ $json.customerEmail }}",
+    "phone": "{{ $json.customerPhone }}"
+  }
+}
+```
+
+```python Python (requests)
+import requests
+
+response = requests.post(
+    "https://api.metrito.com/v2/public/tracking/events",
+    json={
+        "domain": "yourstore.com",
+        "config": {
+            "name": "Purchase",
+            "facebook": {"name": "Purchase"},
+        },
+        "data": {"value": 299.90, "currency": "BRL"},
+        "lead": {
+            "email": "customer@example.com",
+            "phone": "+5511999999999",
+        },
+    },
+)
+
+print(response.json())
+```
+
+</CodeGroup>
+
+## config.name vs config.facebook.name
+
+These serve different purposes and both should be included when forwarding events to Meta:
+
+| Field | Used by | Purpose |
+|-------|---------|---------|
+| `config.name` | **Metrito** | Internal event name for dashboards. Use any name you want. |
+| `config.facebook.name` | **Meta Conversion API** | Must match Meta's standard event names. |
+
+<Warning>
+If `config.facebook` is omitted, the event is recorded in Metrito but **not** sent to Meta. Always include it for events you want attributed in Meta Ads.
+</Warning>
+
+## IP and Geolocation
+
+| Sent from | IP detection | Geolocation |
+|-----------|-------------|-------------|
+| **Browser** (frontend) | Automatic via request headers | Automatic via Cloudflare (`CF-IPCountry`, `CF-IPCity`, etc.) |
+| **Server** (backend) | Uses server's IP | Uses server's location |
+
+When sending events from a backend, the geolocation will reflect your server's location, not the user's. Include user IP/geo data explicitly in the `meta` object if available.
+
+## Webhook Gateway
+
+For payment platforms and e-commerce systems that send webhooks, Metrito provides a dedicated gateway endpoint:
+
+```
+GET/POST /v1/webhook/gateway?k=YOUR_CONNECTION_REF
+```
+
+The `k` parameter identifies the connection (configured in the Metrito dashboard). The webhook payload is automatically mapped and processed through the standard tracking pipeline.
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Test Your Integration" icon="bug" href="/tracking/testing">
+  Verify events are being received and processed correctly.
+</Card>
+
+<Card title="UTM Configuration" icon="bullseye-arrow" href="/tracking/utm-configuration">
+  Set up ad platform parameters for attribution.
+</Card>
+
+</CardGroup>

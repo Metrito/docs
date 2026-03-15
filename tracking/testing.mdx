@@ -1,0 +1,312 @@
+---
+title: "Testing & Debugging"
+description: "Verify your Metrito tracking setup and troubleshoot common issues"
+icon: "bug"
+---
+
+## Verify Pixel Installation
+
+### Method 1: Metrito Pixel Helper (Recommended)
+
+The easiest way to verify is the **Metrito Pixel Helper** Chrome extension.
+
+1. Install the extension (see [WhatsApp Tracking](/tracking/whatsapp#metrito-pixel-helper-extension) for installation steps)
+2. Navigate to your website
+3. Look for the **Metrito** badge in the bottom-left corner of the page
+
+If the badge appears, the pixel is detected. Click the extension icon to see:
+- Container ID
+- Lead data (after form submission)
+- Domain being tracked
+
+### Method 2: Browser DevTools
+
+Open your browser's Developer Tools (`F12` or `Cmd+Shift+I`) and check:
+
+**Console tab** — Look for script loading:
+```javascript
+// Check if mtrt function exists
+typeof window.mtrt // should return "function"
+```
+
+**Network tab** — Filter by `mtrt` or `metrito` and look for:
+- A request to `mtrttag.js` (the tracking script loading)
+- `POST` requests to your SST domain or `api.metrito.com` when events fire
+
+**Application tab** > **Local Storage** — Check for Metrito keys:
+
+| Key | Indicates |
+|-----|-----------|
+| `metrito_lead_id` or `mtrt_lead_id` | A lead has been identified |
+| `metrito_lead_email` | Lead's email is stored |
+| `metrito_lead_phone` | Lead's phone is stored |
+| `metrito_lead_name` | Lead's name is stored |
+
+### Method 3: Check Page Source
+
+View your page source (`Ctrl+U`) and search for any of these strings:
+
+- `mtrt` — v3 pixel namespace
+- `mtrttag` — v3 tag script
+- `mtrtprxy` — v2 proxy endpoint
+- `MTC-` — Container ID
+
+## Test UTM Parameters
+
+### Step 1: Build a Test URL
+
+Add UTM parameters to any page on your site:
+
+```
+https://yoursite.com/landing-page?utm_source=test&utm_campaign=Test Campaign|999999&utm_medium=Test Adset|888888&utm_content=Test Ad|777777&utm_term=feed
+```
+
+### Step 2: Visit the URL
+
+Open the test URL in a **private/incognito** browser window to avoid cached data.
+
+### Step 3: Verify Capture
+
+Open DevTools > Application > Cookies and look for Metrito UTM cookies. The pixel stores UTMs in cookies for session persistence.
+
+Also check localStorage for any `metrito_` prefixed keys that may contain the parsed UTM data.
+
+### Step 4: Submit a Test Event
+
+If you have a form on the page, submit it with test data. Then check the Metrito dashboard to verify the event appears with correct UTM attribution.
+
+## Test Events API
+
+Send a test event using cURL:
+
+```bash
+curl -X POST https://api.metrito.com/v2/public/tracking/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "yourstore.com",
+    "config": { "name": "TestEvent" },
+    "lead": {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  }'
+```
+
+Expected response:
+
+```json
+{
+  "success": true,
+  "eventId": "1758388123_abc123def",
+  "leadId": "lead_20250920_xyz789",
+  "timestamp": 1758388123
+}
+```
+
+If you get a `200` response with `"success": true`, the API is receiving events correctly. Check the Metrito dashboard to confirm the event appears.
+
+## Test Meta Ads Attribution
+
+1. Create a test campaign in Meta Ads with the [recommended UTM parameters](/tracking/utm-configuration#meta-ads-facebook--instagram)
+2. Set a small daily budget
+3. Click your own ad (use a private browser)
+4. Submit a form or complete a purchase on your site
+5. Check the Metrito dashboard:
+   - Event should show `utm_source: facebook`
+   - Campaign name and ID should be parsed correctly
+   - Ad set and ad details should be populated
+
+## Check the Metrito Dashboard
+
+In the Metrito dashboard, navigate to:
+
+- **Events** — Verify events are appearing in real time
+- **Campaigns** — Check that campaign names, ad sets, and ads display correctly
+- **Leads** — Confirm leads are being created with email/phone data
+
+## Common Issues
+
+### Pixel Not Detected
+
+<AccordionGroup>
+
+<Accordion title="Script not loading">
+
+**Symptoms:** No Metrito badge, no `mtrt` function in console, no network requests.
+
+**Causes:**
+- Script tag not added to the page
+- Wrong SST domain in the snippet
+- Content Security Policy (CSP) blocking the script
+
+**Fix:**
+1. View page source and search for `mtrt`
+2. If missing, add the snippet to your `<head>` tag
+3. If present but blocked, check your site's CSP headers. You may need to add your SST domain to the `script-src` directive.
+
+</Accordion>
+
+<Accordion title="Wrong Container ID">
+
+**Symptoms:** Script loads but events don't appear in your Metrito dashboard.
+
+**Cause:** The Container ID in the snippet doesn't match your container.
+
+**Fix:** Go to Metrito Dashboard > Settings > Tracking Container and copy the correct `MTC-XXXXXXX` ID.
+
+</Accordion>
+
+<Accordion title="Ad blocker interference">
+
+**Symptoms:** Script loads intermittently or not at all for some users.
+
+**Cause:** Browser ad blockers may block requests to known tracking domains.
+
+**Fix:** Use server-side tagging (SST) with your own subdomain. Requests to `sst.yourdomain.com` are not blocked by ad blockers since they appear as first-party requests.
+
+</Accordion>
+
+</AccordionGroup>
+
+### UTM Parameters Missing
+
+<AccordionGroup>
+
+<Accordion title="Parameters not in URL after ad click">
+
+**Cause:** UTM template not configured in the ad platform, or configured at the wrong level.
+
+**Fix:**
+1. Verify the UTM template is saved in Meta Ads Manager (Campaign > Edit > Tracking > URL Parameters)
+2. Make sure dynamic parameters use double curly braces: `{{campaign.id}}` not `{campaign.id}`
+3. Preview the ad URL to confirm parameters are appended
+
+</Accordion>
+
+<Accordion title="Parameters stripped by redirect">
+
+**Cause:** A URL shortener, redirect service, or CDN is stripping query parameters.
+
+**Fix:**
+1. Test by pasting the full URL (with UTMs) directly in the browser
+2. Check if your redirect rules preserve query strings
+3. If using a landing page builder, verify it doesn't strip unknown parameters
+
+</Accordion>
+
+<Accordion title="Campaign names show as IDs">
+
+**Cause:** UTM pattern uses only IDs, or the `name_position` configuration is wrong.
+
+**Fix:**
+1. Verify your Meta Ads URL parameters include `{{campaign.name}}` before `{{campaign.id}}`
+2. Check your container's `utm_config.meta_ads.name_position` — it should be `"first"` if names come before IDs
+
+</Accordion>
+
+</AccordionGroup>
+
+### Events Not Reaching Metrito
+
+<AccordionGroup>
+
+<Accordion title="API returns 400 error">
+
+**Cause:** Missing required fields.
+
+**Fix:** Ensure your payload includes both `domain` and `config.name`:
+
+```json
+{
+  "domain": "yourstore.com",
+  "config": { "name": "EventName" }
+}
+```
+
+</Accordion>
+
+<Accordion title="Events not in Meta (config.facebook missing)">
+
+**Cause:** `config.facebook.name` not included in the event payload.
+
+**Fix:** Add the `facebook` object with a standard Meta event name:
+
+```json
+{
+  "config": {
+    "name": "MyInternalName",
+    "facebook": { "name": "Purchase" }
+  }
+}
+```
+
+Without `config.facebook`, events are tracked in Metrito but not forwarded to Meta CAPI.
+
+</Accordion>
+
+<Accordion title="Geolocation shows server location, not user">
+
+**Cause:** Events sent from a backend server use the server's IP for geolocation.
+
+**Fix:** When sending events from a backend, the system uses server IP/geo. For accurate user geolocation, send events from the browser (frontend) instead, or include user location data explicitly in the payload.
+
+</Accordion>
+
+</AccordionGroup>
+
+### Cross-Channel Identity Issues
+
+<AccordionGroup>
+
+<Accordion title="WhatsApp and web sessions not linked">
+
+**Cause:** Missing `wa_session` parameter in WhatsApp outbound links.
+
+**Fix:** Append `?wa_session=UNIQUE_SESSION_ID` to all links sent from WhatsApp to your website. The Metrito pixel captures this parameter automatically and links it to the WhatsApp conversation.
+
+</Accordion>
+
+<Accordion title="Duplicate leads for the same person">
+
+**Cause:** No shared identifier between channels. Identity resolution requires at least one common bridge (email, phone, cookie, or session ID).
+
+**Fix:**
+1. Collect email or phone in both channels
+2. Use `wa_session` for WhatsApp-to-web bridging
+3. The system merges leads automatically when shared identifiers are detected
+
+</Accordion>
+
+</AccordionGroup>
+
+## Debugging Checklist
+
+Use this checklist to systematically verify your setup:
+
+<Steps>
+
+<Step title="Pixel installed">
+  Metrito Pixel Helper shows green badge on your site. `window.mtrt` returns `"function"` in console.
+</Step>
+
+<Step title="Events firing">
+  Network tab shows POST requests to your SST domain when actions occur. Response status is `200` or `204`.
+</Step>
+
+<Step title="UTMs captured">
+  Visit your site with UTM parameters. Check cookies/localStorage for stored UTM values.
+</Step>
+
+<Step title="Leads identified">
+  Submit a form with email/phone. Check localStorage for `metrito_lead_id` and `metrito_lead_email`.
+</Step>
+
+<Step title="Dashboard shows data">
+  Events appear in Metrito dashboard with correct campaign attribution and lead data.
+</Step>
+
+<Step title="Meta events forwarded">
+  Events with `config.facebook.name` appear in Meta Events Manager (may take 5-20 minutes).
+</Step>
+
+</Steps>

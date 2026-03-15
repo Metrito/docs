@@ -1,0 +1,245 @@
+---
+title: "UTM Configuration"
+description: "Configure ad platform URL parameters for full campaign attribution in Metrito"
+icon: "bullseye-arrow"
+---
+
+## Why UTM Parameters Matter
+
+UTM parameters tell Metrito which campaign, ad set, and ad drove each visitor to your website. Without them, Metrito sees the traffic but can't attribute conversions to specific ads.
+
+Metrito uses a **name|id** format that captures both human-readable names (for reporting) and technical IDs (for API calls and reconciliation) in a single parameter.
+
+## Meta Ads (Facebook & Instagram)
+
+### Recommended UTM Template
+
+Add this to your Meta Ads campaigns as URL Parameters:
+
+```
+utm_source=facebook&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}}
+```
+
+### How to Configure
+
+<Steps>
+
+<Step title="Open Meta Ads Manager">
+  Go to [Meta Ads Manager](https://adsmanager.facebook.com) and select your campaign.
+</Step>
+
+<Step title="Navigate to Tracking">
+  Click **Edit** on the campaign, then scroll to the **Tracking** section.
+</Step>
+
+<Step title="Add URL Parameters">
+  In the **URL Parameters** field, paste the UTM template above.
+</Step>
+
+<Step title="Save">
+  Click **Publish**. All ads in this campaign will include these parameters automatically.
+</Step>
+
+</Steps>
+
+<Tip>
+Configure at the **campaign level** so every ad set and ad inherits the parameters automatically. You can also set them at the ad set or ad level for more granular control.
+</Tip>
+
+### What Meta's Dynamic Parameters Do
+
+Meta replaces the `{{double_curly}}` placeholders with real values at click time:
+
+| Parameter | Replaced with | Example |
+|-----------|---------------|---------|
+| `{{campaign.name}}` | Campaign name | `Summer Sale Brazil` |
+| `{{campaign.id}}` | Campaign ID | `123456789` |
+| `{{adset.name}}` | Ad set name | `Mobile iOS 25-34` |
+| `{{adset.id}}` | Ad set ID | `987654321` |
+| `{{ad.name}}` | Ad name | `Video 50% Off` |
+| `{{ad.id}}` | Ad ID | `456789123` |
+| `{{placement}}` | Placement | `feed`, `story`, `reel` |
+
+### What Metrito Extracts
+
+From a URL like:
+
+```
+https://yoursite.com/products?utm_source=facebook&utm_campaign=Summer Sale Brazil|123456789&utm_medium=Mobile iOS 25-34|987654321&utm_content=Video 50% Off|456789123&utm_term=feed&fbclid=IwAR1a2b3c
+```
+
+Metrito parses:
+
+| Field | Value |
+|-------|-------|
+| `utm_source` | `facebook` |
+| Campaign name | `Summer Sale Brazil` |
+| Campaign ID | `123456789` |
+| Ad set name | `Mobile iOS 25-34` |
+| Ad set ID | `987654321` |
+| Ad name | `Video 50% Off` |
+| Ad ID | `456789123` |
+| Placement | `feed` |
+| Facebook Click ID | `IwAR1a2b3c` |
+
+## Google Ads
+
+### Recommended Tracking Template
+
+In Google Ads, use a **tracking template** at the campaign level:
+
+```
+{lpurl}?utm_source=google&utm_campaign={campaignname}|{campaignid}&utm_medium={adgroupname}|{adgroupid}&utm_content={creative}&utm_term={keyword}&gclid={gclid}
+```
+
+### How to Configure
+
+1. Go to **Google Ads** > select your campaign
+2. Click **Settings** > **Campaign URL options**
+3. Paste the tracking template in **Tracking template**
+4. Click **Save**
+
+### Google Ads Dynamic Parameters
+
+| Parameter | Replaced with |
+|-----------|---------------|
+| `{lpurl}` | Final landing page URL |
+| `{campaignname}` | Campaign name |
+| `{campaignid}` | Campaign ID |
+| `{adgroupname}` | Ad group name |
+| `{adgroupid}` | Ad group ID |
+| `{creative}` | Creative/Ad ID |
+| `{keyword}` | Keyword that triggered the ad |
+| `{gclid}` | Google Click ID |
+
+## TikTok Ads
+
+### Recommended UTM Template
+
+```
+utm_source=tiktok&utm_campaign={{campaign.name}}|{{campaign_id}}&utm_medium={{adgroup.name}}|{{adgroup_id}}&utm_content={{ad.name}}|{{ad_id}}&ttclid={{ttclid}}
+```
+
+### How to Configure
+
+1. Go to **TikTok Ads Manager** > select your campaign
+2. Click **Edit** > scroll to **Tracking**
+3. Under **Tracking URL Parameters**, paste the template
+4. Click **Save**
+
+## Custom UTM Parsing
+
+If you already use a different UTM structure, Metrito can be configured to parse your existing pattern.
+
+### Default Configuration
+
+Metrito expects the `name|id` format with a pipe (`|`) separator:
+
+```json
+{
+  "utm_config": {
+    "meta_ads": {
+      "enabled": true,
+      "separator": "|",
+      "name_position": "first",
+      "id_position": "second",
+      "pattern": {
+        "utm_campaign": "{{campaign.name}}|{{campaign.id}}",
+        "utm_medium": "{{adset.name}}|{{adset.id}}",
+        "utm_content": "{{ad.name}}|{{ad.id}}",
+        "utm_term": "{{placement}}"
+      }
+    }
+  }
+}
+```
+
+### Custom Separator
+
+If you use underscore (`_`) instead of pipe:
+
+Your Meta Ads URL Parameters:
+```
+utm_campaign={{campaign.name}}_{{campaign.id}}
+```
+
+Container config:
+```json
+{
+  "utm_config": {
+    "meta_ads": {
+      "separator": "_",
+      "name_position": "first",
+      "id_position": "second"
+    }
+  }
+}
+```
+
+### ID Before Name
+
+If you prefer IDs first:
+
+Your Meta Ads URL Parameters:
+```
+utm_campaign={{campaign.id}}|{{campaign.name}}
+```
+
+Container config:
+```json
+{
+  "utm_config": {
+    "meta_ads": {
+      "separator": "|",
+      "name_position": "second",
+      "id_position": "first"
+    }
+  }
+}
+```
+
+### IDs Only
+
+If you only track IDs (names fetched from Meta API):
+
+```
+utm_campaign={{campaign.id}}&utm_medium={{adset.id}}&utm_content={{ad.id}}
+```
+
+```json
+{
+  "utm_config": {
+    "meta_ads": {
+      "separator": null,
+      "fallback_to_meta_api": true
+    }
+  }
+}
+```
+
+<Info>
+The IDs-only approach requires Meta API credentials configured in your container settings.
+</Info>
+
+## Best Practices
+
+1. **Configure at the campaign level** — Applies to all ads automatically
+2. **Use the recommended `name|id` pattern** — Gives you both readable names and technical IDs
+3. **Test before scaling** — Run a small-budget test campaign and verify attribution in Metrito
+4. **Don't change patterns mid-campaign** — It can break historical attribution data
+5. **Use consistent naming** — Clean campaign names make reporting much easier
+6. **Always include click IDs** — `fbclid`, `gclid`, `ttclid` are critical for cross-channel identity
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="WhatsApp Tracking" icon="comment-dots" href="/tracking/whatsapp">
+  Link WhatsApp conversations to web sessions.
+</Card>
+
+<Card title="Test Your Setup" icon="bug" href="/tracking/testing">
+  Verify UTM parameters are being captured correctly.
+</Card>
+
+</CardGroup>
