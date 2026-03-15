@@ -3,22 +3,22 @@
   "theme": "mint",
   "name": "Metrito",
   "colors": {
-    "primary": "#2f38f0",
-    "light": "#6366f1",
-    "dark": "#1e2ad0"
+    "primary": "#1e55eb",
+    "light": "#4d7ef5",
+    "dark": "#1240c4"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Guias",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Primeiros Passos",
             "pages": ["index", "quickstart"]
           },
           {
-            "group": "Tracking",
+            "group": "Rastreamento",
             "pages": [
               "tracking/overview",
               "tracking/web-setup",
@@ -34,7 +34,7 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "Documentação da API",
             "pages": ["api-reference/introduction"]
           }
         ]
@@ -43,7 +43,12 @@
     "global": {
       "anchors": [
         {
-          "anchor": "App",
+          "anchor": "Site Oficial",
+          "href": "https://metrito.com",
+          "icon": "globe"
+        },
+        {
+          "anchor": "Plataforma",
           "href": "https://app.metrito.com",
           "icon": "gauge"
         }
@@ -57,7 +62,7 @@
   "navbar": {
     "primary": {
       "type": "button",
-      "label": "Dashboard",
+      "label": "Acessar plataforma",
       "href": "https://app.metrito.com"
     }
   },

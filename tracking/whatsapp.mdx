@@ -1,177 +1,117 @@
 ---
-title: "WhatsApp Tracking"
-description: "Link WhatsApp conversations to web sessions for cross-channel attribution"
+title: "Rastreamento via WhatsApp"
+description: "Conecte conversas do WhatsApp às sessões web para atribuição entre canais"
 icon: "comment-dots"
 ---
 
-## How WhatsApp Tracking Works
+## Como Funciona o Rastreamento via WhatsApp
 
-Most customers don't convert on their first visit. A typical journey looks like:
+A maioria dos clientes não converte na primeira visita. Uma jornada típica se parece com isso:
 
-1. User clicks a Facebook ad and lands on your website (web session created)
-2. User leaves without converting
-3. User contacts you on WhatsApp days later
-4. User clicks a link in WhatsApp and returns to the website
-5. User purchases
+1. O usuário clica em um anúncio do Facebook e acessa seu site (sessão web criada)
+2. O usuário sai sem converter
+3. Dias depois, o usuário entra em contato pelo WhatsApp
+4. O usuário clica em um link enviado no WhatsApp e volta ao site
+5. O usuário realiza a compra
 
-Without cross-channel tracking, step 3 creates a completely separate identity. Metrito solves this by linking WhatsApp conversations to web sessions through **bridge identifiers**.
+Sem rastreamento entre canais, o passo 3 cria um perfil completamente separado. O Metrito resolve isso conectando conversas do WhatsApp a sessões web por meio de **identificadores de conexão**.
 
-## Bridge Identifiers
+## Como a Conexão Acontece
 
-Bridge identifiers are values that exist across channels and allow Metrito to connect them:
-
-```mermaid
-flowchart LR
-    subgraph day1 [Day 1: Ad Click]
-        adClick[Facebook Ad] --> website1[Website Visit]
-        website1 --> cookie[Cookie: abc123]
-    end
-
-    subgraph day3 [Day 3: WhatsApp]
-        wpp[WhatsApp Message] --> phone[Phone: +5511999]
-        phone --> waSession["wa_session: wa_xyz"]
-    end
-
-    subgraph day4 [Day 4: Return Visit]
-        wppLink["WhatsApp Link with wa_session"] --> website2[Website Visit]
-        website2 --> cookie2[Cookie: abc123]
-        website2 --> waParam["URL: ?wa_session=wa_xyz"]
-    end
-
-    waSession -. "bridge" .-> waParam
-    cookie -. "same browser" .-> cookie2
-```
-
-On Day 4, the `wa_session` parameter in the URL links the WhatsApp phone number to the browser cookie. Metrito's identity resolution merges both journeys into one:
-
-| Identifier | Source | Linked via |
-|------------|--------|------------|
-| Cookie `abc123` | Website visit (Day 1) | Direct |
-| Phone `+5511999` | WhatsApp (Day 3) | Direct |
-| `wa_session: wa_xyz` | WhatsApp (Day 3) | Direct |
-| Cookie `abc123` + `wa_session` | Return visit (Day 4) | Bridge |
-
-Result: the Facebook ad gets attribution credit for the WhatsApp-assisted purchase.
-
-## WhatsApp Link Parameters
-
-When sending links from WhatsApp to your website, append the `wa_session` parameter to preserve attribution:
+Quando um usuário clica em um link enviado pelo WhatsApp com o parâmetro `wa_session` na URL, o pixel do Metrito captura esse parâmetro automaticamente e vincula a sessão web à conversa do WhatsApp.
 
 ```
-https://yoursite.com/checkout?wa_session=wa_xyz123
+https://seusite.com.br/checkout?wa_session=ID_DA_CONVERSA
 ```
 
-Metrito's tracking script captures this parameter automatically and links the web session to the WhatsApp conversation.
+A partir desse momento, o Metrito consegue conectar:
+- O número de telefone do WhatsApp
+- As sessões anteriores no site (pelo cookie do navegador)
+- O e-mail preenchido em formulários futuros
+
+O resultado é uma **jornada unificada**: o anúncio que trouxe o usuário pela primeira vez recebe crédito pela compra, mesmo que ela tenha acontecido dias depois via WhatsApp.
+
+## Configurando Links com wa_session
+
+Sempre que enviar links do WhatsApp para o seu site, adicione o parâmetro `wa_session`:
+
+```
+https://seusite.com.br/produto?wa_session=IDENTIFICADOR_UNICO
+```
+
+O identificador deve ser **único por conversa**. Pode ser o ID da conversa no seu sistema de atendimento, um hash gerado automaticamente, ou qualquer string que identifique aquela interação específica.
 
 <Tip>
-If you use automated WhatsApp tools or chatbots, configure them to append `wa_session` to all outbound links. The session ID should be unique per conversation.
+Se você usa ferramentas de automação de WhatsApp ou chatbots, configure-os para adicionar automaticamente o `wa_session` a todos os links enviados aos clientes.
 </Tip>
 
-## Cross-Channel Identity Resolution
-
-When Metrito sees identifiers from different channels, it resolves them through identity clusters:
+## Exemplo de Jornada Conectada
 
 ```
-Day 1: Website visit
-  identifiers: { cookie: "abc123" }
-  → Create journey_001, cluster_A
+Dia 1: Usuário clica em anúncio do Facebook
+  → Visita o site com utm_source=facebook
+  → Cookie do navegador é criado
 
-Day 3: WhatsApp message
-  identifiers: { phone: "+5511999999999", wa_session: "wa_xyz" }
-  → Create journey_002, cluster_B (different person, so far)
+Dia 3: Usuário envia mensagem no WhatsApp
+  → Número de telefone é registrado
 
-Day 4: User clicks WhatsApp link to website
-  identifiers: { cookie: "abc123", wa_session: "wa_xyz" }
-  → cookie → cluster_A (journey_001)
-  → wa_session → cluster_B (journey_002)
-  → CONFLICT: merge cluster_A + cluster_B!
+Dia 4: Atendente envia link com wa_session
+  → Usuário clica e volta ao site
+  → Metrito conecta: cookie do navegador ↔ wa_session ↔ telefone
 
-Result:
-  → Single journey with: cookie + phone + email + wa_session
-  → Complete attribution from first ad click to final purchase
+Resultado: Anúncio do Dia 1 recebe atribuição pela compra do Dia 4
 ```
 
-The merge happens **synchronously** before events are forwarded to destinations like Meta CAPI, ensuring the correct lead ID is sent to ad platforms.
+## Extensão Metrito Pixel Helper
 
-## Metrito Pixel Helper Extension
+O **Metrito Pixel Helper** é uma extensão do Chrome que ajuda a verificar e depurar o rastreamento em tempo real, incluindo sessões originadas do WhatsApp.
 
-The **Metrito Pixel Helper** is a Chrome extension that helps you debug and verify tracking in real time, including WhatsApp-originated sessions.
+### O que Ela Faz
 
-### What It Does
+- Detecta o script do Metrito em qualquer site
+- Exibe o **ID do Contêiner** da página atual
+- Mostra os **dados do lead** salvos no navegador (ID, e-mail, telefone, nome)
+- Captura e exibe eventos de rastreamento conforme são disparados
+- Exibe um indicador visual quando o Metrito está ativo na página
 
-- Detects the Metrito tracking script on any website (both v2 and v3 pixel formats)
-- Shows the **Container ID** for the current page
-- Displays **lead data** stored in localStorage (`metrito_lead_id`, email, phone, name)
-- Intercepts and displays tracking events as they fire (via `sendBeacon` and `fetch`)
-- Shows a visual indicator when Metrito is active on a page
+### Como Instalar
 
-### How to Install
+1. Receba o arquivo da extensão com o time Metrito
+2. Acesse `chrome://extensions/` no Chrome
+3. Ative o **Modo do desenvolvedor** (canto superior direito)
+4. Clique em **Carregar sem compactação** e selecione a pasta da extensão
+5. O ícone do Metrito Pixel Helper aparece na barra de ferramentas
 
-1. Download the extension from the Metrito team (or from the Chrome Web Store when available)
-2. Go to `chrome://extensions/` in Chrome
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** and select the extension folder
-5. The Metrito Pixel Helper icon appears in your toolbar
+### Usando a Extensão
 
-### Using the Extension
+Com a extensão instalada, acesse qualquer página com o pixel do Metrito:
 
-Once installed, navigate to any page with the Metrito pixel:
+- Um pequeno badge **Metrito** aparece no canto inferior esquerdo da página confirmando a detecção
+- Clique no ícone da extensão para ver:
+  - Se o script foi detectado
+  - O ID do contêiner
+  - Dados do lead atual (ID, nome, e-mail, telefone)
+  - Domínio rastreado
 
-- A small **Metrito** badge appears in the bottom-left corner of the page confirming detection
-- Click the extension icon to see:
-  - Whether the Metrito script is detected
-  - The container ID
-  - Current lead data (ID, name, email, phone)
-  - Domain being tracked
+Quando eventos são disparados, uma notificação toast aparece no canto superior direito com o nome do evento.
 
-When events fire, a toast notification appears in the top-right showing the event name.
+## Boas Práticas
 
-### Script Detection
+1. **Sempre adicione `wa_session` nos links enviados pelo WhatsApp** — é o principal elo de conexão entre o WhatsApp e a web
+2. **Use o Pixel Helper para verificar** — confira se os dados do lead aparecem após envios de formulário
+3. **Colete e-mail nas conversas do WhatsApp** — o e-mail é um identificador de alta confiança que conecta perfis mesmo sem `wa_session`
+4. **Use o formato E.164 para telefone** — sempre inclua o código do país (ex: `+5511999999999`) para correspondência consistente
 
-The extension detects Metrito via multiple methods:
-
-| Method | What it checks |
-|--------|----------------|
-| Script `src` | URLs containing `mtrtprxy`, `mtrttag`, or `metrito` |
-| Inline script | v3 IIFE patterns like `o="mtrt"` or `api.metrito.com` |
-| Network requests | Requests to `/mtrtprxy/events` or `/mtrt` endpoints |
-| localStorage | Keys starting with `metrito_` or `mtrt_` |
-| Window object | Presence of `window.mtrt` function |
-
-## WhatsApp Business API Integration
-
-For businesses using the WhatsApp Business API directly (not just WhatsApp Web), Metrito can receive events via webhooks:
-
-```
-POST /v1/publish/zap
-```
-
-WhatsApp events are processed through Metrito's ingestion pipeline and linked to existing web sessions when bridge identifiers match.
-
-The webhook handler supports message events including:
-- Conversation start
-- Messages sent and received
-- Message status updates (delivered, read)
-
-Contact the Metrito team for WhatsApp Business API webhook configuration.
-
-## Best Practices
-
-1. **Always append `wa_session` to outbound links** — This is the primary bridge between WhatsApp and web
-2. **Use the Pixel Helper to verify** — Check that lead data appears after form submissions
-3. **Collect email in WhatsApp conversations** — Email is a high-confidence bridge identifier that connects to web sessions even without `wa_session`
-4. **Use E.164 phone format** — Always include country code (e.g., `+5511999999999`) for consistent matching
-
-## Next Steps
+## Próximos Passos
 
 <CardGroup cols={2}>
 
-<Card title="Events API" icon="terminal" href="/tracking/events-api">
-  Send server-side events from any backend system.
+<Card title="API de Eventos" icon="terminal" href="/tracking/events-api">
+  Envie eventos pelo servidor a partir de qualquer sistema.
 </Card>
 
-<Card title="Test Your Setup" icon="bug" href="/tracking/testing">
-  Verify cross-channel tracking is working correctly.
+<Card title="Testar a Configuração" icon="bug" href="/tracking/testing">
+  Verifique se o rastreamento entre canais está funcionando corretamente.
 </Card>
 
 </CardGroup>

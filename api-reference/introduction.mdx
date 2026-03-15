@@ -1,37 +1,32 @@
 ---
 title: "API Reference"
-description: "Metrito API endpoints for tracking, events, and integrations"
+description: "Endpoints da API do Metrito para rastreamento e integrações"
 ---
 
-## Tracking Events API
+## API de Eventos de Rastreamento
 
-The primary API for sending tracking events to Metrito.
+O principal endpoint para enviar eventos de rastreamento ao Metrito.
 
-<Card title="Events API Guide" icon="terminal" href="/tracking/events-api">
-  Complete documentation for the `POST /v2/public/tracking/events` endpoint, including request schema, response format, and code examples.
+<Card title="Guia da API de Eventos" icon="terminal" href="/tracking/events-api">
+  Documentação completa do endpoint `POST /v2/public/tracking/events`, incluindo schema da requisição, formato da resposta e exemplos de código.
 </Card>
 
-## Base URL
+## URL Base
 
 ```
 https://api.metrito.com
 ```
 
-## Endpoints
+## Endpoint Principal
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/v2/public/tracking/events` | Send a tracking event (public, no auth) |
-| `GET/POST` | `/v1/webhook/gateway?k=REF` | Receive webhooks from payment gateways |
-| `POST` | `/v1/publish/tag` | Publish a tracking tag message |
-| `POST` | `/v1/publish/zap` | Publish a WhatsApp/Zap message |
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| `POST` | `/v2/public/tracking/events` | Enviar um evento de rastreamento (público, sem autenticação) |
+
+## Autenticação
+
+O endpoint de rastreamento público (`/v2/public/tracking/events`) **não exige autenticação**. O campo `domain` no corpo da requisição identifica o contêiner de destino.
 
 <Info>
-Full OpenAPI specification and interactive playground coming soon. For now, see the [Events API guide](/tracking/events-api) for detailed request/response documentation.
+Especificação OpenAPI completa e playground interativo em breve. Por enquanto, consulte o [guia da API de Eventos](/tracking/events-api) para documentação detalhada.
 </Info>
-
-## Authentication
-
-The public tracking endpoint (`/v2/public/tracking/events`) requires **no authentication**. The `domain` field in the request body identifies the target container.
-
-Internal endpoints (`/v1/publish/*`) use bearer token authentication and are intended for server-to-server communication.

@@ -1,56 +1,55 @@
 ---
-title: "Events API"
-description: "Send server-side tracking events from any platform using Metrito's public API"
+title: "API de Eventos"
+description: "Envie eventos de rastreamento pelo servidor a partir de qualquer plataforma usando a API pública do Metrito"
 icon: "terminal"
 ---
 
-## Overview
+## Visão Geral
 
-The Events API is a public REST endpoint for sending tracking events from any backend system — e-commerce platforms, CRMs, automation tools (n8n, Make, Zapier), or custom applications.
+A API de Eventos é um endpoint REST público para enviar eventos de rastreamento a partir de qualquer sistema backend — plataformas de e-commerce, CRMs, ferramentas de automação (n8n, Make, Zapier) ou aplicações personalizadas.
 
 ```
 POST /v2/public/tracking/events
 ```
 
-| Property | Value |
-|----------|-------|
-| **Method** | POST |
-| **Authentication** | None (public endpoint) |
+| Propriedade | Valor |
+|-------------|-------|
+| **Método** | POST |
+| **Autenticação** | Nenhuma (endpoint público) |
 | **Content-Type** | `application/json` |
-| **Base URL** | `https://api.metrito.com` |
+| **URL Base** | `https://api.metrito.com` |
 
 <Info>
-The API is public and doesn't require authentication. The `domain` field in the payload identifies the container. Events are processed asynchronously via RabbitMQ — the API responds immediately after queuing.
+A API é pública e não exige autenticação. O campo `domain` no payload identifica o contêiner de destino. Os eventos são processados de forma assíncrona — a API responde imediatamente após receber o evento.
 </Info>
 
-## Request Schema
+## Schema da Requisição
 
-### Required Fields
+### Campos Obrigatórios
 
 ```json
 {
-  "domain": "yourstore.com",
+  "domain": "sujaloja.com.br",
   "config": {
-    "name": "EventName"
+    "name": "NomeDoEvento"
   }
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `domain` | string | Domain associated with your tracking container (e.g., `yourstore.com`) or your MTC ID (e.g., `MTC-5X35GWQ`) |
-| `config.name` | string | Event name for Metrito dashboards and reporting |
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `domain` | string | Domínio associado ao seu contêiner de rastreamento (ex: `sujaloja.com.br`) ou o ID MTC (ex: `MTC-5X35GWQ`) |
+| `config.name` | string | Nome do evento para dashboards e relatórios no Metrito |
 
-### Optional Fields
+### Campos Opcionais
 
 ```json
 {
-  "domain": "yourstore.com",
-  "version": 2,
-  "eventId": "custom_event_id_123",
+  "domain": "sujaloja.com.br",
+  "eventId": "meu_evento_123",
   "eventTime": 1700000000,
   "config": {
-    "name": "Purchase",
+    "name": "Compra",
     "facebook": {
       "name": "Purchase"
     }
@@ -61,22 +60,22 @@ The API is public and doesn't require authentication. The `domain` field in the 
   },
   "lead": {
     "id": "lead_20250920_abc123",
-    "name": "John Doe",
-    "email": "john@example.com",
+    "name": "João Silva",
+    "email": "joao@exemplo.com",
     "phone": "+5511999999999"
   },
   "utm": {
     "utm_source": "facebook",
     "utm_medium": "cpc",
-    "utm_campaign": "Summer Sale|123456789",
-    "utm_content": "Video Ad|456789",
+    "utm_campaign": "Promoção Verão|123456789",
+    "utm_content": "Vídeo Ad|456789",
     "utm_term": "feed"
   },
   "meta": {
-    "url": "https://yourstore.com/checkout/success",
-    "title": "Order Confirmed",
+    "url": "https://sujaloja.com.br/checkout/sucesso",
+    "title": "Pedido Confirmado",
     "language": "pt-BR",
-    "referrer": "https://yourstore.com/cart"
+    "referrer": "https://sujaloja.com.br/carrinho"
   },
   "cookies": {
     "_fbp": "fb.1.1234567890.987654321",
@@ -85,21 +84,21 @@ The API is public and doesn't require authentication. The `domain` field in the 
 }
 ```
 
-### Field Reference
+### Referência dos Campos
 
 <ResponseField name="domain" type="string" required>
-  Domain associated with your tracking container, or the MTC container ID.
+  Domínio associado ao seu contêiner, ou o ID MTC (ex: `MTC-5X35GWQ`).
 </ResponseField>
 
 <ResponseField name="config" type="object" required>
   <Expandable title="config">
     <ResponseField name="name" type="string" required>
-      Event name for Metrito dashboards. Can be any string meaningful to you (e.g., `Lead`, `Purchase`, `FormSubmit`).
+      Nome do evento para o Metrito. Pode ser qualquer string que faça sentido para você (ex: `Lead`, `Compra`, `FormularioEnviado`).
     </ResponseField>
     <ResponseField name="facebook" type="object">
       <Expandable title="facebook">
         <ResponseField name="name" type="string">
-          Event name sent to Meta Conversion API. Must follow Meta's standard events (`PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`).
+          Nome do evento enviado para a API de Conversões da Meta. Deve seguir os eventos padrão da Meta: `PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`.
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -107,20 +106,20 @@ The API is public and doesn't require authentication. The `domain` field in the 
 </ResponseField>
 
 <ResponseField name="eventId" type="string">
-  Unique event ID. Auto-generated as `{timestamp}_{random}` if omitted (e.g., `1758388123_kk78h7u5sf`).
+  ID único do evento. Gerado automaticamente como `{timestamp}_{aleatorio}` se omitido (ex: `1758388123_kk78h7u5sf`).
 </ResponseField>
 
 <ResponseField name="eventTime" type="number">
-  Unix timestamp of the event. Defaults to current server time if omitted.
+  Timestamp Unix do evento. Usa o horário atual se omitido.
 </ResponseField>
 
 <ResponseField name="data" type="object">
   <Expandable title="data">
     <ResponseField name="value" type="number">
-      Monetary value of the event (e.g., `299.90`).
+      Valor monetário do evento (ex: `299.90`).
     </ResponseField>
     <ResponseField name="currency" type="string">
-      ISO 4217 currency code (e.g., `BRL`, `USD`).
+      Código de moeda ISO 4217 (ex: `BRL`, `USD`).
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -128,47 +127,41 @@ The API is public and doesn't require authentication. The `domain` field in the 
 <ResponseField name="lead" type="object">
   <Expandable title="lead">
     <ResponseField name="id" type="string">
-      Explicit lead ID. Auto-generated as `lead_{YYYYMMDD}_{random}` if omitted when lead data is present.
+      ID explícito do lead. Gerado automaticamente como `lead_{AAAAMMDD}_{aleatorio}` se omitido quando dados de lead estão presentes.
     </ResponseField>
-    <ResponseField name="name" type="string">
-      Lead's full name.
-    </ResponseField>
-    <ResponseField name="email" type="string">
-      Lead's email address.
-    </ResponseField>
-    <ResponseField name="phone" type="string">
-      Lead's phone in E.164 format (e.g., `+5511999999999`).
-    </ResponseField>
+    <ResponseField name="name" type="string">Nome completo do lead.</ResponseField>
+    <ResponseField name="email" type="string">Endereço de e-mail do lead.</ResponseField>
+    <ResponseField name="phone" type="string">Telefone no formato E.164 (ex: `+5511999999999`).</ResponseField>
   </Expandable>
 </ResponseField>
 
 <ResponseField name="utm" type="object">
   <Expandable title="utm">
-    <ResponseField name="utm_source" type="string">Source (e.g., `facebook`, `google`)</ResponseField>
-    <ResponseField name="utm_medium" type="string">Medium (e.g., `cpc`, `email`)</ResponseField>
-    <ResponseField name="utm_campaign" type="string">Campaign (supports `name|id` format)</ResponseField>
-    <ResponseField name="utm_content" type="string">Content (supports `name|id` format)</ResponseField>
-    <ResponseField name="utm_term" type="string">Term or placement. If starts with `lead_`, used as lead ID.</ResponseField>
+    <ResponseField name="utm_source" type="string">Fonte (ex: `facebook`, `google`)</ResponseField>
+    <ResponseField name="utm_medium" type="string">Meio (ex: `cpc`, `email`)</ResponseField>
+    <ResponseField name="utm_campaign" type="string">Campanha (suporta formato `nome|id`)</ResponseField>
+    <ResponseField name="utm_content" type="string">Conteúdo (suporta formato `nome|id`)</ResponseField>
+    <ResponseField name="utm_term" type="string">Termo ou posicionamento.</ResponseField>
   </Expandable>
 </ResponseField>
 
 <ResponseField name="meta" type="object">
   <Expandable title="meta">
-    <ResponseField name="url" type="string">Page URL where the event occurred</ResponseField>
-    <ResponseField name="title" type="string">Page title</ResponseField>
-    <ResponseField name="language" type="string">Page language</ResponseField>
-    <ResponseField name="referrer" type="string">Referrer URL</ResponseField>
+    <ResponseField name="url" type="string">URL da página onde o evento ocorreu</ResponseField>
+    <ResponseField name="title" type="string">Título da página</ResponseField>
+    <ResponseField name="language" type="string">Idioma da página</ResponseField>
+    <ResponseField name="referrer" type="string">URL de referência</ResponseField>
   </Expandable>
-  Auto-populated from request headers when sent from a browser. When sent from a server, include these explicitly if available.
+  Preenchido automaticamente quando o evento é enviado pelo navegador. Quando enviado pelo servidor, inclua esses dados explicitamente se disponíveis.
 </ResponseField>
 
 <ResponseField name="cookies" type="object">
-  Browser cookies for ad platform matching. Common keys: `_fbp` (Meta), `_ga` (Google Analytics), `_fbc` (Meta click).
+  Cookies do navegador para correspondência nas plataformas de anúncios. Chaves mais comuns: `_fbp` (Meta), `_ga` (Google Analytics), `_fbc` (clique Meta).
 </ResponseField>
 
-## Response
+## Resposta
 
-### Success (200 OK)
+### Sucesso (200 OK)
 
 ```json
 {
@@ -179,7 +172,7 @@ The API is public and doesn't require authentication. The `domain` field in the 
 }
 ```
 
-### Validation Error (400)
+### Erro de Validação (400)
 
 ```json
 {
@@ -190,7 +183,7 @@ The API is public and doesn't require authentication. The `domain` field in the 
 }
 ```
 
-## Code Examples
+## Exemplos de Código
 
 <CodeGroup>
 
@@ -198,9 +191,9 @@ The API is public and doesn't require authentication. The `domain` field in the 
 curl -X POST https://api.metrito.com/v2/public/tracking/events \
   -H "Content-Type: application/json" \
   -d '{
-    "domain": "yourstore.com",
+    "domain": "sujaloja.com.br",
     "config": {
-      "name": "Purchase",
+      "name": "Compra",
       "facebook": { "name": "Purchase" }
     },
     "data": {
@@ -208,7 +201,7 @@ curl -X POST https://api.metrito.com/v2/public/tracking/events \
       "currency": "BRL"
     },
     "lead": {
-      "email": "customer@example.com",
+      "email": "cliente@exemplo.com",
       "phone": "+5511999999999"
     }
   }'
@@ -221,14 +214,14 @@ const response = await fetch(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      domain: "yourstore.com",
+      domain: "sujaloja.com.br",
       config: {
         name: "Lead",
         facebook: { name: "Lead" },
       },
       lead: {
         name: "Maria Santos",
-        email: "maria@example.com",
+        email: "maria@exemplo.com",
         phone: "+5511999999999",
       },
       utm: {
@@ -239,32 +232,32 @@ const response = await fetch(
   }
 );
 
-const result = await response.json();
-console.log(result.eventId, result.leadId);
+const resultado = await response.json();
+console.log(resultado.eventId, resultado.leadId);
 ```
 
-```javascript n8n (HTTP Request Node)
-// HTTP Request node configuration:
-// Method: POST
+```javascript n8n (Nó HTTP Request)
+// Configuração do nó HTTP Request:
+// Método: POST
 // URL: https://api.metrito.com/v2/public/tracking/events
 // Body Content Type: JSON
 // Body:
 {
-  "domain": "yourstore.com",
+  "domain": "sujaloja.com.br",
   "config": {
-    "name": "{{ $json.eventName }}",
+    "name": "{{ $json.nomeEvento }}",
     "facebook": {
-      "name": "{{ $json.facebookEventName }}"
+      "name": "{{ $json.nomeEventoFacebook }}"
     }
   },
   "data": {
-    "value": "{{ $json.orderValue }}",
+    "value": "{{ $json.valorPedido }}",
     "currency": "BRL"
   },
   "lead": {
-    "name": "{{ $json.customerName }}",
-    "email": "{{ $json.customerEmail }}",
-    "phone": "{{ $json.customerPhone }}"
+    "name": "{{ $json.nomeCliente }}",
+    "email": "{{ $json.emailCliente }}",
+    "phone": "{{ $json.telefoneCliente }}"
   }
 }
 ```
@@ -272,69 +265,59 @@ console.log(result.eventId, result.leadId);
 ```python Python (requests)
 import requests
 
-response = requests.post(
+resposta = requests.post(
     "https://api.metrito.com/v2/public/tracking/events",
     json={
-        "domain": "yourstore.com",
+        "domain": "sujaloja.com.br",
         "config": {
-            "name": "Purchase",
+            "name": "Compra",
             "facebook": {"name": "Purchase"},
         },
         "data": {"value": 299.90, "currency": "BRL"},
         "lead": {
-            "email": "customer@example.com",
+            "email": "cliente@exemplo.com",
             "phone": "+5511999999999",
         },
     },
 )
 
-print(response.json())
+print(resposta.json())
 ```
 
 </CodeGroup>
 
 ## config.name vs config.facebook.name
 
-These serve different purposes and both should be included when forwarding events to Meta:
+Esses campos têm finalidades distintas e ambos devem ser incluídos quando você quer encaminhar eventos para a Meta:
 
-| Field | Used by | Purpose |
-|-------|---------|---------|
-| `config.name` | **Metrito** | Internal event name for dashboards. Use any name you want. |
-| `config.facebook.name` | **Meta Conversion API** | Must match Meta's standard event names. |
+| Campo | Utilizado por | Finalidade |
+|-------|---------------|------------|
+| `config.name` | **Metrito** | Nome interno do evento para dashboards. Use qualquer nome que quiser. |
+| `config.facebook.name` | **API de Conversões da Meta** | Deve corresponder a um evento padrão da Meta. |
 
 <Warning>
-If `config.facebook` is omitted, the event is recorded in Metrito but **not** sent to Meta. Always include it for events you want attributed in Meta Ads.
+Se `config.facebook` for omitido, o evento é registrado no Metrito mas **não** é enviado para a Meta. Inclua-o sempre que quiser atribuição no Meta Ads.
 </Warning>
 
-## IP and Geolocation
+## IP e Geolocalização
 
-| Sent from | IP detection | Geolocation |
-|-----------|-------------|-------------|
-| **Browser** (frontend) | Automatic via request headers | Automatic via Cloudflare (`CF-IPCountry`, `CF-IPCity`, etc.) |
-| **Server** (backend) | Uses server's IP | Uses server's location |
+| Enviado de | Detecção de IP | Geolocalização |
+|------------|---------------|----------------|
+| **Navegador** (frontend) | Automática via cabeçalhos da requisição | Automática pelo IP do usuário |
+| **Servidor** (backend) | IP do servidor | Localização do servidor |
 
-When sending events from a backend, the geolocation will reflect your server's location, not the user's. Include user IP/geo data explicitly in the `meta` object if available.
+Ao enviar eventos de um backend, a geolocalização refletirá a localização do seu servidor, não a do usuário. Se disponível, inclua os dados de localização do usuário explicitamente no objeto `meta`.
 
-## Webhook Gateway
-
-For payment platforms and e-commerce systems that send webhooks, Metrito provides a dedicated gateway endpoint:
-
-```
-GET/POST /v1/webhook/gateway?k=YOUR_CONNECTION_REF
-```
-
-The `k` parameter identifies the connection (configured in the Metrito dashboard). The webhook payload is automatically mapped and processed through the standard tracking pipeline.
-
-## Next Steps
+## Próximos Passos
 
 <CardGroup cols={2}>
 
-<Card title="Test Your Integration" icon="bug" href="/tracking/testing">
-  Verify events are being received and processed correctly.
+<Card title="Testar a Integração" icon="bug" href="/tracking/testing">
+  Verifique se os eventos estão sendo recebidos e processados corretamente.
 </Card>
 
-<Card title="UTM Configuration" icon="bullseye-arrow" href="/tracking/utm-configuration">
-  Set up ad platform parameters for attribution.
+<Card title="Configuração de UTMs" icon="bullseye-arrow" href="/tracking/utm-configuration">
+  Configure os parâmetros das plataformas de anúncios para atribuição.
 </Card>
 
 </CardGroup>

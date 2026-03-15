@@ -1,28 +1,28 @@
 ---
-title: "Quickstart"
-description: "Get Metrito tracking running on your website in under 5 minutes"
+title: "Primeiros Passos"
+description: "Coloque o rastreamento do Metrito funcionando no seu site em menos de 5 minutos"
 ---
 
-## Get tracking running in three steps
+## Configure o rastreamento em três etapas
 
 <Steps>
 
-<Step title="Create a Tracking Container">
+<Step title="Crie um Contêiner de Rastreamento">
 
-A **container** is the top-level entity in Metrito that isolates all your tracking data, sources, and destinations. Each container has a unique identifier in the format `MTC-XXXXXXX` (similar to GTM container IDs).
+Um **contêiner** é o espaço dedicado ao seu negócio dentro do Metrito. Ele organiza todos os seus dados de rastreamento, fontes de eventos e destinos de conversão. Cada contêiner possui um identificador único no formato `MTC-XXXXXXX`.
 
-1. Log in to the [Metrito Dashboard](https://app.metrito.com)
-2. Navigate to **Settings** > **Tracking Container**
-3. Create a new container for your domain
-4. Copy the **Container ID** (e.g., `MTC-5X35GWQ`)
+1. Acesse a [Plataforma Metrito](https://app.metrito.com)
+2. Vá em **Configurações** > **Contêiner de Rastreamento**
+3. Crie um novo contêiner para o seu domínio
+4. Copie o **ID do Contêiner** (ex: `MTC-5X35GWQ`)
 
-<Tip>Each container is fully isolated — events, leads, and attribution data never mix between containers.</Tip>
+<Tip>Cada contêiner é completamente isolado — eventos, leads e dados de atribuição de um contêiner nunca se misturam com os de outro.</Tip>
 
 </Step>
 
-<Step title="Install the Tracking Pixel">
+<Step title="Instale o Pixel de Rastreamento">
 
-Add the Metrito tracking script to your website. Paste this snippet before the closing `</head>` tag:
+Adicione o script do Metrito em todas as páginas do seu site, antes do fechamento da tag `</head>`:
 
 ```html
 <script>
@@ -30,65 +30,65 @@ Add the Metrito tracking script to your website. Paste this snippet before the c
 (w[o].queue=w[o].queue||[]).push(arguments)};w[o].ver=1;w[o].queue=[];
 var s=d.createElement("script");s.async=1;
 s.src=h+"/${o}tag.js";d.head.appendChild(s)
-})(window,document,new URL(location),"https://sst.yourdomain.com","MTC-XXXXXXX");
+})(window,document,new URL(location),"https://sst.seudominio.com.br","MTC-XXXXXXX");
 </script>
 ```
 
-Replace:
-- `sst.yourdomain.com` with your server-side tagging domain (or use `api.metrito.com` as fallback)
-- `MTC-XXXXXXX` with your container ID
+Substitua:
+- `sst.seudominio.com.br` pelo seu subdomínio de rastreamento (fornecido pelo time Metrito)
+- `MTC-XXXXXXX` pelo ID do seu contêiner
 
-<Info>The pixel automatically captures page views, UTM parameters, referrer, cookies (`_fbp`, `_ga`), and device information.</Info>
+<Info>O pixel captura automaticamente: visualizações de página, parâmetros UTM, referenciador, cookies (`_fbp`, `_ga`) e informações do dispositivo.</Info>
 
-See the full [Web Pixel Setup](/tracking/web-setup) guide for details.
+Veja o guia completo em [Instalação do Pixel Web](/tracking/web-setup).
 
 </Step>
 
-<Step title="Configure UTM Parameters">
+<Step title="Configure os Parâmetros UTM">
 
-Add these URL parameters to your Meta Ads campaigns so Metrito can attribute conversions to the right campaign, ad set, and ad:
+Adicione estes parâmetros de URL nas suas campanhas do Meta Ads para que o Metrito identifique qual campanha, conjunto de anúncios e criativo gerou cada conversão:
 
 ```
 utm_source=facebook&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}}
 ```
 
-In **Meta Ads Manager**: Campaign > Edit > Tracking > URL Parameters.
+No **Gerenciador de Anúncios da Meta**: Campanha > Editar > Rastreamento > Parâmetros de URL.
 
-Metrito auto-parses the `name|id` format to extract both human-readable names and technical IDs for reporting.
+O Metrito interpreta automaticamente o formato `nome|id` para extrair tanto o nome legível quanto o ID técnico de cada campanha.
 
-See the full [UTM Configuration](/tracking/utm-configuration) guide for Meta, Google, and TikTok setup.
+Veja o guia completo em [Configuração de UTMs](/tracking/utm-configuration).
 
 </Step>
 
 </Steps>
 
-## What happens next
+## O que acontece depois
 
-Once installed, Metrito begins tracking immediately:
+Com o pixel instalado, o Metrito começa a rastrear imediatamente:
 
-- **Page views** are captured with full UTM attribution
-- **Leads** are identified when email or phone is submitted through forms
-- **Sessions** are created and linked to journeys for multi-touch attribution
-- **Cross-channel identity** links anonymous web visits to WhatsApp conversations and purchases
+- **Visualizações de página** são capturadas com atribuição completa de UTM
+- **Leads** são identificados quando e-mail ou telefone é enviado via formulário
+- **Sessões** são criadas e agrupadas para atribuição multi-toque
+- **Identidade entre canais** conecta visitas anônimas ao site com conversas no WhatsApp e compras
 
-## Next steps
+## Próximos passos
 
 <CardGroup cols={2}>
 
-<Card title="Tracking Overview" icon="chart-mixed" href="/tracking/overview">
-  Understand how containers, events, sessions, and journeys work together.
+<Card title="Visão Geral do Rastreamento" icon="chart-mixed" href="/tracking/overview">
+  Entenda como contêineres, eventos, sessões e jornadas funcionam juntos.
 </Card>
 
-<Card title="Events API" icon="terminal" href="/tracking/events-api">
-  Send server-side events from Shopify, WooCommerce, or any backend.
+<Card title="API de Eventos" icon="terminal" href="/tracking/events-api">
+  Envie eventos pelo servidor a partir do Shopify, WooCommerce ou qualquer backend.
 </Card>
 
-<Card title="WhatsApp Tracking" icon="comment-dots" href="/tracking/whatsapp">
-  Link WhatsApp conversations to web sessions.
+<Card title="Rastreamento via WhatsApp" icon="comment-dots" href="/tracking/whatsapp">
+  Conecte conversas do WhatsApp às sessões web.
 </Card>
 
-<Card title="Testing & Debugging" icon="bug" href="/tracking/testing">
-  Verify your installation and troubleshoot issues.
+<Card title="Testes e Diagnóstico" icon="bug" href="/tracking/testing">
+  Verifique sua instalação e resolva problemas.
 </Card>
 
 </CardGroup>
