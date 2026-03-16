@@ -1,0 +1,733 @@
+openapi: 3.1.0
+info:
+  title: API de Rastreamento — Metrito
+  version: "2.0"
+  description: |
+    API pública para envio de eventos de rastreamento e webhooks de transação.
+    Projetada para integrações simples e rápidas com qualquer plataforma.
+
+servers:
+  - url: https://api.metrito.com
+    description: Produção
+
+paths:
+  /v2/public/tracking/events:
+    post:
+      operationId: sendTrackingEvent
+      summary: Enviar evento de rastreamento
+      description: |
+        Endpoint público para enviar eventos de rastreamento ao Metrito.
+        Não exige autenticação — o campo `domain` identifica o contêiner de destino.
+
+        O sistema gera `eventId` e `leadId` automaticamente quando não enviados.
+      x-mint:
+        metadata:
+          title: Enviar Evento de Rastreamento
+        content: |
+          ## Recursos Principais
+
+          | Recurso | Descrição |
+          |---------|-----------|
+          | **Event ID opcional** | Gera `eventId` único automaticamente se não for enviado |
+          | **Lead ID opcional** | Gera `leadId` automaticamente quando há dados de lead mas nenhum ID foi informado |
+          | **Detecção via UTM** | Extrai lead ID do parâmetro `utm_term` quando segue o padrão `lead_*` |
+          | **Timestamp padrão** | Usa o horário atual quando `eventTime` não é fornecido |
+          | **IP e geolocalização** | Detecta IP e geo automaticamente quando enviado do **navegador** |
+          | **Enriquecimento de metadados** | Preenche automaticamente com headers da requisição (referrer, user-agent, etc.) |
+          | **Processamento assíncrono** | Usa RabbitMQ para processar eventos sem bloquear a resposta |
+
+          ## config.name vs config.facebook.name
+
+          | Campo | Onde é usado | Descrição |
+          |-------|--------------|-----------|
+          | `config.name` | **Metrito** | Nome interno para relatórios e dashboards. Pode ser qualquer nome. |
+          | `config.facebook.name` | **Meta (Facebook/Instagram)** | Nome enviado à Meta Conversion API. Deve seguir o padrão oficial da Meta (`PageView`, `Purchase`, `Lead`, `AddPaymentInfo`, `InitiateCheckout`). |
+
+          <Warning>Se `config.facebook` for omitido, o evento é registrado no Metrito mas **não** é enviado para a Meta. Inclua-o sempre que quiser atribuição no Meta Ads.</Warning>
+
+          ## Como os IDs são Gerados
+
+          **Event ID** — Quando `eventId` não é enviado: `{timestamp}_{stringAleatoria}` (ex: `1758388123_kk78h7u5sf`)
+
+          **Lead ID** — O sistema determina nesta ordem:
+          1. `lead.id` se informado
+          2. `utm_term` se começar com `lead_`
+          3. Geração automática: `lead_{AAAAMMDD}_{aleatorio}` (ex: `lead_20250920_clqvd0mg3fu`)
+
+          ## IP e Geolocalização
+
+          <Warning>A detecção automática de IP e geolocalização funciona corretamente **apenas quando o evento é enviado do navegador** (frontend). Quando enviado do servidor (backend), o sistema usará os dados de IP e geo do seu servidor.</Warning>
+
+          | Enviado de | Detecção de IP | Geolocalização |
+          |------------|----------------|----------------|
+          | **Navegador** (frontend) | Automática via headers | Automática pelo IP real do usuário |
+          | **Servidor** (backend) | IP do servidor | Localização do servidor |
+
+          Quando enviado do navegador, o sistema detecta automaticamente via headers Cloudflare (`CF-IPCountry`, `CF-IPCity`, `CF-IPContinent`, `CF-IPLongitude`, `CF-IPLatitude`).
+
+          ## Enriquecimento de Metadados
+
+          Quando campos de `meta` não são enviados, o sistema preenche automaticamente:
+
+          | Campo | Origem |
+          |-------|--------|
+          | `url` | Header `Referer` ou `Origin` |
+          | `language` | Header `Accept-Language` |
+          | `referrer` | Header `Referer` |
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingEvent"
+            examples:
+              minimal:
+                summary: Evento mínimo
+                value:
+                  domain: meusite.com.br
+                  config:
+                    name: PageView
+              withFacebook:
+                summary: Evento com conversão Meta
+                value:
+                  domain: sujaloja.com.br
+                  config:
+                    name: Compra
+                    facebook:
+                      name: Purchase
+                  data:
+                    value: 299.90
+                    currency: BRL
+                  lead:
+                    name: João Silva
+                    email: joao@exemplo.com
+                    phone: "+5511999999999"
+                  utm:
+                    utm_source: google
+                    utm_medium: cpc
+              complete:
+                summary: Payload completo
+                value:
+                  version: 2
+                  domain: sujaloja.com.br
+                  eventId: meu_evento_123
+                  eventTime: 1700000000
+                  config:
+                    name: Compra
+                    facebook:
+                      name: Purchase
+                  data:
+                    value: 299.90
+                    currency: BRL
+                  lead:
+                    id: lead_20250920_abc123
+                    name: João Silva
+                    email: joao@exemplo.com
+                    phone: "+5511999999999"
+                    sent: true
+                  utm:
+                    utm_source: facebook
+                    utm_medium: cpc
+                    utm_campaign: "Campanha Verão|123456789"
+                    utm_content: "Vídeo Ad|456789"
+                    utm_term: feed
+                  meta:
+                    url: https://sujaloja.com.br/checkout/sucesso
+                    title: Pedido Confirmado
+                    language: pt-BR
+                    referrer: https://sujaloja.com.br/carrinho
+                  cookies:
+                    _fbp: fb.1.1234567890.987654321
+                    _ga: GA1.2.1234567890.1234567890
+      responses:
+        "200":
+          description: Evento aceito e enfileirado para processamento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingEventResponse"
+              example:
+                success: true
+                eventId: 1758388123_kk78h7u5sf
+                leadId: lead_20250920_xyz789
+                timestamp: 1758388123
+        "400":
+          description: Erro de validação — campos obrigatórios ausentes ou inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+              example:
+                message: Domain is required
+                errors:
+                  - field: domain
+                    message: Domain field is required
+        "500":
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalError"
+
+  /v2/tracking/generic:
+    post:
+      operationId: sendGenericWebhook
+      summary: Enviar webhook de pedido/transação
+      description: |
+        Webhook genérico para receber eventos de pedido/transação de qualquer plataforma de checkout, ERP ou sistema customizado.
+
+        O Metrito irá:
+        - **Fazer upsert** do registro da transação usando `transaction.id` como chave única
+        - **Detectar o tipo de evento** automaticamente pelo campo `status`
+        - **Disparar conversão de Compra** para a Meta Conversion API quando `status = "approved"`
+        - **Associar a transação a um lead rastreado** via UTM, e-mail ou telefone
+      x-mint:
+        metadata:
+          title: Enviar Webhook de Pedido
+        content: |
+          ## Autenticação
+
+          O parâmetro `k` na query string identifica e autentica a requisição. Nenhum header `Authorization` é necessário.
+
+          <Info>**Onde encontrar sua chave:** No painel do Metrito, acesse **Conexões → Adicionar Conexão → Personalizado**. Após criar a conexão, a URL completa do webhook (incluindo seu `k`) é exibida.</Info>
+
+          ## Valores Monetários
+
+          <Warning>**Todos os valores monetários devem ser enviados como inteiros em centavos (menor unidade da moeda).**</Warning>
+
+          | Campo | Exemplo (BRL) | Valor Correto |
+          |-------|---------------|---------------|
+          | `transaction.value` | R$ 199,80 | `19980` |
+          | `transaction.commission_value` | R$ 29,97 | `2997` |
+          | `products[].value` | R$ 49,90 | `4990` |
+
+          **`commission_value` vs `value`:**
+
+          | Campo | Finalidade |
+          |-------|-----------|
+          | `commission_value` | **Obrigatório.** A receita rastreada pelo Metrito e enviada à Meta CAPI como receita da compra. |
+          | `value` | Opcional. Valor bruto da transação para exibição e relatórios. |
+
+          ## Enum de Status
+
+          | Valor | Descrição | Dispara Compra? |
+          |-------|-----------|-----------------|
+          | `pending` | Aguardando pagamento | Não |
+          | `approved` | Pagamento confirmado | **Sim** |
+          | `authorized` | Autorizado, não capturado | Não |
+          | `failed` | Pagamento falhou/recusado | Não |
+          | `refunded` | Estornado | Não |
+          | `chargeback` | Contestado e revertido | Não |
+          | `under_analysis` | Em análise de fraude | Não |
+
+          **Mapeamento de status comuns:**
+
+          | Status Externo | Mapear para |
+          |---------------|-------------|
+          | `paid`, `completed`, `succeeded`, `captured` | `approved` |
+          | `waiting_payment`, `created`, `open` | `pending` |
+          | `cancelled`, `expired`, `refused`, `declined` | `failed` |
+          | `dispute`, `in_dispute` | `chargeback` |
+          | `partially_refunded`, `refunded` | `refunded` |
+
+          ## Timestamps e Ordenação
+
+          Todos os timestamps devem ser ISO 8601 **com offset de fuso horário**. Use UTC sempre que possível.
+
+          O Metrito usa `updated_at` como **guarda de idempotência** — só atualiza o registro se o `updated_at` recebido for mais recente que o armazenado.
+
+          ## Enum de Pagamento
+
+          | Valor | Descrição |
+          |-------|-----------|
+          | `credit_card` | Cartão de crédito ou débito |
+          | `bank_slip` | Boleto bancário |
+          | `pix` | Pix |
+          | `paypal` | PayPal |
+          | `free` | Gratuito / trial |
+          | `unknown` | Fallback para métodos não cobertos |
+
+          ## Rastreamento UTM e `mlid`
+
+          Para atribuição completa de anúncios, passe os dados UTM no objeto `utm`. Use a forma curta sem o prefixo `utm_` (`source`, `medium`, etc.).
+
+          O campo `mlid` (Metrito Lead ID) vincula a transação diretamente a uma sessão de navegação rastreada. Se a tag Metrito estiver instalada, capture o cookie `mtrt_lid` ou o query param `mlid` e envie como `utm.mlid`.
+      parameters:
+        - name: k
+          in: query
+          required: true
+          description: Chave de conexão obtida no painel do Metrito ao criar uma conexão "Personalizado"
+          schema:
+            type: string
+            example: abc123def456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericWebhook"
+            examples:
+              minimal:
+                summary: Payload mínimo
+                value:
+                  transaction:
+                    id: order_0987654321
+                    status: pending
+                    commission_currency: BRL
+                    commission_value: 9990
+                    created_at: "2024-06-15T10:00:00Z"
+                    updated_at: "2024-06-15T10:00:00Z"
+              approved:
+                summary: Transação aprovada com UTM
+                value:
+                  transaction:
+                    id: order_1234567890
+                    status: approved
+                    currency: BRL
+                    value: 19980
+                    commission_currency: BRL
+                    commission_value: 17982
+                    created_at: "2024-06-15T13:00:00Z"
+                    updated_at: "2024-06-15T13:02:45Z"
+                    customer:
+                      name: João Silva
+                      email: joao.silva@email.com
+                      phone: "+5511987654321"
+                    products:
+                      - id: prod_mentoria_basica
+                        product_name: "Mentoria Online - Plano Básico"
+                        quantity: 1
+                        value: 19980
+                    payment:
+                      method: credit_card
+                      installments: 3
+                  utm:
+                    source: facebook
+                    medium: cpc
+                    campaign: "120215678901234567"
+                    mlid: ldr_xk7mq2n9p4
+      responses:
+        "200":
+          description: Webhook aceito e enfileirado para processamento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+              example:
+                success: true
+        "400":
+          description: Erro de validação, chave ausente ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericWebhookError"
+              examples:
+                missingKey:
+                  summary: Chave ausente
+                  value:
+                    message: "Missing key parameter. (query k)"
+                validationError:
+                  summary: Erro de validação
+                  value:
+                    message: Validation Error.
+                    errors:
+                      transaction.commission_currency: "String must contain exactly 3 character(s)"
+                      transaction.created_at: Invalid datetime
+
+components:
+  schemas:
+    TrackingEvent:
+      type: object
+      required:
+        - domain
+        - config
+      properties:
+        domain:
+          type: string
+          description: Domínio do contêiner de rastreamento (ex. `sujaloja.com.br`) ou ID MTC (ex. `MTC-5X35GWQ`)
+          example: sujaloja.com.br
+        config:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: Nome do evento no Metrito — identificador interno para relatórios e dashboards. Pode ser qualquer nome.
+              example: Purchase
+            facebook:
+              type: object
+              description: Configuração para envio à API de Conversões da Meta. Omita se não quiser enviar para a Meta.
+              properties:
+                name:
+                  type: string
+                  description: "Nome do evento no padrão oficial da Meta: `PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`"
+                  example: Purchase
+        version:
+          type: number
+          description: Versão da API
+          default: 2
+          example: 2
+        eventId:
+          type: string
+          description: ID único do evento. Gerado automaticamente como `{timestamp}_{aleatorio}` se omitido.
+          example: 1758388123_kk78h7u5sf
+        eventTime:
+          type: number
+          description: Timestamp Unix do evento em segundos. Usa o horário atual se omitido.
+          example: 1700000000
+        data:
+          type: object
+          description: Dados específicos do evento (valor, moeda, etc.)
+          properties:
+            value:
+              type: number
+              description: Valor monetário do evento
+              example: 299.90
+            currency:
+              type: string
+              description: Código de moeda ISO 4217
+              example: BRL
+        lead:
+          type: object
+          description: Dados do lead/usuário. O `leadId` é gerado automaticamente se omitido e dados de lead estão presentes.
+          properties:
+            id:
+              type: string
+              description: ID explícito do lead. Gerado como `lead_{AAAAMMDD}_{aleatorio}` se omitido.
+              example: lead_20250920_abc123
+            name:
+              type: string
+              description: Nome completo do lead
+              example: João Silva
+            email:
+              type: string
+              format: email
+              description: Endereço de e-mail do lead
+              example: joao@exemplo.com
+            phone:
+              type: string
+              description: Telefone no formato E.164
+              example: "+5511999999999"
+            sent:
+              type: boolean
+              description: Indica se os dados do lead já foram enviados anteriormente
+        utm:
+          type: object
+          description: Parâmetros UTM da campanha
+          properties:
+            utm_source:
+              type: string
+              description: Fonte (ex. `facebook`, `google`)
+              example: facebook
+            utm_medium:
+              type: string
+              description: Meio (ex. `cpc`, `email`)
+              example: cpc
+            utm_campaign:
+              type: string
+              description: "Campanha (suporta formato `nome|id`)"
+              example: "Black Friday|123456789"
+            utm_content:
+              type: string
+              description: "Conteúdo do anúncio (suporta formato `nome|id`)"
+            utm_term:
+              type: string
+              description: Termo ou posicionamento. Se começar com `lead_`, é usado como lead ID automaticamente.
+        meta:
+          type: object
+          description: Metadados da página. Preenchido automaticamente quando enviado pelo navegador.
+          properties:
+            url:
+              type: string
+              description: URL da página onde o evento ocorreu
+            title:
+              type: string
+              description: Título da página
+            language:
+              type: string
+              description: Idioma da página
+              example: pt-BR
+            referrer:
+              type: string
+              description: URL de referência
+            favicon:
+              type: string
+              description: URL do favicon da página
+            description:
+              type: string
+              description: Descrição da página
+        cookies:
+          type: object
+          description: "Cookies do navegador para correspondência em plataformas de anúncios. Chaves comuns: `_fbp`, `_fbc`, `_ga`."
+          additionalProperties:
+            type: string
+          example:
+            _fbp: fb.1.1234567890.987654321
+            _ga: GA1.2.1234567890.1234567890
+
+    TrackingEventResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica que o evento foi aceito e enfileirado
+        eventId:
+          type: string
+          description: ID do evento (gerado ou o que foi enviado)
+        leadId:
+          type: string
+          description: ID do lead (quando aplicável)
+        timestamp:
+          type: number
+          description: Timestamp utilizado no processamento
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    InternalError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Internal server error
+        error:
+          type: string
+          description: Detalhes do erro (apenas em ambiente de desenvolvimento)
+
+    GenericWebhook:
+      type: object
+      required:
+        - transaction
+      properties:
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+        utm:
+          $ref: "#/components/schemas/WebhookUTM"
+
+    Transaction:
+      type: object
+      required:
+        - id
+        - status
+        - commission_currency
+        - commission_value
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          maxLength: 255
+          description: Identificador único da transação/pedido. Usado como chave de upsert.
+          example: order_1234567890
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - authorized
+            - failed
+            - refunded
+            - chargeback
+            - under_analysis
+          description: "Status atual da transação. Apenas `approved` dispara conversão de Compra na Meta."
+          example: approved
+        commission_currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Moeda do valor de comissão (ISO 4217, 3 letras maiúsculas)
+          example: BRL
+        commission_value:
+          type: integer
+          minimum: 0
+          description: "Receita rastreada pelo Metrito, em centavos. Enviada à Meta CAPI. Ex: R$ 99,90 = 9990"
+          example: 17982
+        created_at:
+          type: string
+          format: date-time
+          description: Quando a transação foi criada (ISO 8601 com fuso horário, preferencialmente UTC)
+          example: "2024-06-15T13:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: "Quando a transação foi atualizada. Controla idempotência — só processa se mais recente que o armazenado."
+          example: "2024-06-15T13:02:45Z"
+        value:
+          type: integer
+          minimum: 0
+          description: "Valor bruto da transação em centavos. Opcional. Ex: R$ 199,80 = 19980"
+          example: 19980
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Moeda do campo `value` (ISO 4217). Usa a moeda da conexão se omitido.
+          example: BRL
+        transaction_upsell:
+          type: string
+          maxLength: 255
+          description: ID da transação pai para compras upsell/order bump
+        customer:
+          $ref: "#/components/schemas/Customer"
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        payment:
+          $ref: "#/components/schemas/Payment"
+
+    Customer:
+      type: object
+      description: "Dados do cliente. `email` e `phone` melhoram significativamente a atribuição."
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nome completo do cliente
+          example: João Silva
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: E-mail do cliente. Usado para associar transações a leads conhecidos.
+          example: joao.silva@email.com
+        phone:
+          type: string
+          maxLength: 20
+          description: "Telefone com código do país. Ex: `+5511987654321`"
+          example: "+5511987654321"
+        address:
+          $ref: "#/components/schemas/Address"
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          description: Nome da rua
+        number:
+          type: string
+          description: Número do imóvel
+        complement:
+          type: string
+          description: Apartamento, sala, etc.
+        neighborhood:
+          type: string
+          description: Bairro
+        city:
+          type: string
+          description: Nome da cidade
+        state:
+          type: string
+          description: "Abreviação do estado (ex: `SP`)"
+        country:
+          type: string
+          pattern: "^[A-Z]{2}$"
+          description: "Código do país ISO 3166-1 alfa-2. Padrão: `BR`"
+          default: BR
+          example: BR
+        postal_code:
+          type: string
+          description: CEP/código postal (caracteres não numéricos removidos automaticamente)
+
+    Product:
+      type: object
+      required:
+        - id
+        - product_name
+        - quantity
+        - value
+      properties:
+        id:
+          type: string
+          description: Identificador do produto (único no catálogo)
+          example: prod_mentoria_basica
+        product_name:
+          type: string
+          description: Nome legível do produto
+          example: "Mentoria Online - Plano Básico"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantidade de unidades compradas
+          example: 1
+        value:
+          type: integer
+          minimum: 0
+          description: "Preço unitário em centavos. Ex: R$ 99,90 = 9990"
+          example: 19980
+
+    Payment:
+      type: object
+      properties:
+        method:
+          type: string
+          enum:
+            - credit_card
+            - bank_slip
+            - pix
+            - paypal
+            - free
+            - unknown
+          description: Método de pagamento utilizado
+          example: credit_card
+        installments:
+          type: integer
+          minimum: 1
+          maximum: 24
+          description: Número de parcelas (cartão de crédito)
+          example: 3
+
+    WebhookUTM:
+      type: object
+      description: "Parâmetros UTM para atribuição. Use a forma curta sem prefixo `utm_`."
+      properties:
+        source:
+          type: string
+          description: "Fonte de tráfego (ex: `facebook`, `google`)"
+          example: facebook
+        medium:
+          type: string
+          description: "Meio de tráfego (ex: `cpc`, `email`)"
+          example: cpc
+        campaign:
+          type: string
+          description: Identificador de campanha (nome ou ID)
+        term:
+          type: string
+          description: Identificador de palavra-chave ou conjunto de anúncios
+        content:
+          type: string
+          description: Identificador no nível do anúncio
+        mlid:
+          type: string
+          description: "Metrito Lead ID — identificador de sessão do script de rastreamento (cookie `mtrt_lid`). Habilita atribuição precisa no nível do clique."
+          example: ldr_xk7mq2n9p4
+
+    GenericWebhookError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: string

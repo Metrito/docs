@@ -1,32 +1,66 @@
 ---
-title: "API Reference"
-description: "Endpoints da API do Metrito para rastreamento e integrações"
+title: "Visão Geral"
+description: "Referência completa das APIs públicas do Metrito"
 ---
 
-## API de Eventos de Rastreamento
+O Metrito expõe três APIs com finalidades distintas:
 
-O principal endpoint para enviar eventos de rastreamento ao Metrito.
-
-<Card title="Guia da API de Eventos" icon="terminal" href="/tracking/events-api">
-  Documentação completa do endpoint `POST /v2/public/tracking/events`, incluindo schema da requisição, formato da resposta e exemplos de código.
-</Card>
-
-## URL Base
-
-```
-https://api.metrito.com
-```
-
-## Endpoint Principal
-
-| Método | Caminho | Descrição |
-|--------|---------|-----------|
-| `POST` | `/v2/public/tracking/events` | Enviar um evento de rastreamento (público, sem autenticação) |
+| API | URL Base | Finalidade |
+|-----|----------|-----------|
+| **Plataforma** | `https://api.metrito.com` | Autenticação, projetos e conexões |
+| **Rastreamento** | `https://api.metrito.com` | Eventos de rastreamento e webhooks de transação |
+| **Dados** | `https://data.metrito.com` | Consulta de métricas de anúncios sincronizadas |
 
 ## Autenticação
 
-O endpoint de rastreamento público (`/v2/public/tracking/events`) **não exige autenticação**. O campo `domain` no corpo da requisição identifica o contêiner de destino.
+A maioria dos endpoints exige autenticação. Veja a [página de autenticação](/api-reference/authentication) para detalhes completos.
 
-<Info>
-Especificação OpenAPI completa e playground interativo em breve. Por enquanto, consulte o [guia da API de Eventos](/tracking/events-api) para documentação detalhada.
-</Info>
+**Resumo rápido:**
+
+- **API Key** `mtk_live_...` — recomendado para integrações. Criada em **Configurações → Chaves de API** na plataforma.
+- **JWT** — obtido via `POST /v3/auth/login` com e-mail e senha.
+- **Públicos** — `POST /v2/public/tracking/events` e `GET /v3/fields` não exigem autenticação.
+
+## APIs
+
+<CardGroup cols={3}>
+
+<Card title="Plataforma" icon="grid-2" href="/api-reference/platform/post-v3-auth-login">
+  Login, listagem de projetos e conexões. Ponto de partida para descobrir IDs.
+</Card>
+
+<Card title="Rastreamento" icon="satellite-dish" href="/api-reference/tracking/post-v2-public-tracking-events">
+  Envie eventos de rastreamento e webhooks de transação de qualquer plataforma.
+</Card>
+
+<Card title="Dados" icon="chart-mixed" href="/api-reference/data/get-v3-fields">
+  Consulte métricas de anúncios com filtros, granularidade temporal e conversão de moeda.
+</Card>
+
+</CardGroup>
+
+## Fluxo Típico de Integração
+
+<Steps>
+
+<Step title="Autentique-se">
+  Crie uma [API Key](/api-reference/authentication) na plataforma ou faça [login](/api-reference/platform/post-v3-auth-login) para obter um JWT.
+</Step>
+
+<Step title="Descubra seus projetos">
+  Use `GET /v3/projects` para listar os projetos disponíveis e obter o `project_id`.
+</Step>
+
+<Step title="Liste as conexões">
+  Use `GET /v3/projects/{project_id}/connections` para ver as fontes de dados conectadas.
+</Step>
+
+<Step title="Consulte campos disponíveis">
+  Use `GET /v3/fields` para descobrir quais métricas e dimensões estão disponíveis.
+</Step>
+
+<Step title="Consulte métricas">
+  Use `POST /v3/query` com o `project_id`, campos desejados e período para obter os dados.
+</Step>
+
+</Steps>

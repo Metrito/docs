@@ -31,11 +31,31 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "Referência de API",
         "groups": [
           {
-            "group": "Documentação da API",
-            "pages": ["api-reference/introduction"]
+            "group": "Visão Geral",
+            "icon": "book",
+            "pages": ["api-reference/introduction", "api-reference/authentication"]
+          },
+          {
+            "group": "Plataforma",
+            "icon": "grid-2",
+            "pages": [
+              "openapi/platform.yaml POST /v3/auth/login",
+              "openapi/platform.yaml GET /v3/projects",
+              "openapi/platform.yaml GET /v3/projects/{project_id}/connections"
+            ]
+          },
+          {
+            "group": "API de Rastreamento",
+            "icon": "satellite-dish",
+            "pages": ["openapi/tracking.yaml POST /v2/public/tracking/events", "openapi/tracking.yaml POST /v2/tracking/generic"]
+          },
+          {
+            "group": "API de Dados",
+            "icon": "chart-mixed",
+            "pages": ["openapi/data.yaml GET /v3/fields", "openapi/data.yaml POST /v3/query"]
           }
         ]
       }

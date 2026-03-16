@@ -1,0 +1,579 @@
+openapi: 3.1.0
+info:
+  title: API de Dados — Metrito
+  version: "3.0"
+  description: |
+    API para consulta de métricas de anúncios sincronizadas das plataformas (Meta Ads, Google Ads, TikTok Ads).
+    Os dados são sincronizados automaticamente em background e ficam disponíveis para consulta via esta API.
+
+servers:
+  - url: https://data.metrito.com
+    description: Produção
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  /v3/fields:
+    get:
+      operationId: listFields
+      summary: Listar campos disponíveis
+      description: |
+        Retorna a lista de todas as métricas e dimensões disponíveis para consulta,
+        com metadados como nome, descrição, tipo de dado e fontes suportadas.
+
+        Este endpoint é público e não exige autenticação.
+      x-mint:
+        metadata:
+          title: Listar Campos Disponíveis
+      security: []
+      parameters:
+        - name: includeHidden
+          in: query
+          required: false
+          description: Incluir campos ocultos (não exibidos por padrão na UI)
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            default: "false"
+      responses:
+        "200":
+          description: Lista de campos retornada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldsResponse"
+              example:
+                fields:
+                  - key: spend
+                    name: Investimento
+                    shortName: Invest.
+                    description: Valor gasto em anúncios
+                    type: measure
+                    dataType: currency
+                    displayType: currency
+                    sourceKey: v3-ads
+                    sources:
+                      - meta_ads
+                      - google_ads
+                      - tiktok_ads
+                    good_direction: down
+                    available: true
+                    filterable: true
+                    sortable: true
+                  - key: ctr
+                    name: CTR
+                    shortName: CTR
+                    description: Taxa de clique (clicks / impressions)
+                    type: measure
+                    dataType: percentage
+                    displayType: percentage
+                    sourceKey: v3-ads
+                    sources:
+                      - meta_ads
+                      - google_ads
+                      - tiktok_ads
+                    good_direction: up
+                    available: true
+                    filterable: false
+                    sortable: true
+                count: 2
+                source: v3-ads
+                timestamp: "2026-03-15T12:00:00.000Z"
+
+  /v3/query:
+    post:
+      operationId: queryMetrics
+      summary: Consultar métricas de anúncios
+      description: |
+        Endpoint unificado para consulta de métricas de anúncios. Retorna dados sincronizados do PostgreSQL via CubeJS,
+        com enriquecimento de nomes de entidades e conversão de moeda automática.
+
+        Os dados são sincronizados em background a cada 5-30 minutos (conforme o tier do plano).
+        A resposta é instantânea (~50ms) pois consulta dados já armazenados localmente.
+      x-mint:
+        metadata:
+          title: Consultar Métricas
+        content: |
+          ## Autenticação
+
+          Este endpoint aceita dois formatos de autenticação:
+
+          1. **JWT da plataforma**
+             - Header: `Authorization: Bearer {jwt}`
+             - Header adicional obrigatório: `X-Workspace-Id`
+
+          2. **API Key do Metrito**
+             - Header: `Authorization: Bearer mtk_live_...` **ou** `x-api-key: mtk_live_...`
+             - **Não** precisa enviar `X-Workspace-Id` (o workspace é resolvido pela própria chave)
+
+          ## Métricas Disponíveis
+
+          ### Métricas Base (sincronizadas das APIs)
+
+          | Métrica | Descrição |
+          |---------|-----------|
+          | `spend` | Valor gasto em anúncios |
+          | `impressions` | Vezes que o anúncio foi exibido |
+          | `clicks` | Cliques no anúncio |
+          | `reach` | Pessoas únicas alcançadas (apenas Meta) |
+          | `video_plays` | Vezes que o vídeo começou a rodar |
+          | `video_views_p75` | Visualizações até 75% do vídeo |
+
+          ### Métricas Calculadas — Eficiência de Tráfego
+
+          | Métrica | Fórmula | Descrição |
+          |---------|---------|-----------|
+          | `ctr` | clicks / impressions | Taxa de clique |
+          | `cpc` | spend / clicks | Custo por clique |
+          | `cpm` | (spend / impressions) * 1000 | Custo por mil impressões |
+          | `frequency` | impressions / reach | Frequência média |
+
+          ### Métricas Calculadas — Análise de Vídeo
+
+          | Métrica | Fórmula | Descrição |
+          |---------|---------|-----------|
+          | `hook_rate` | video_views_3s / impressions | Qualidade do hook (3s) |
+          | `hold_rate` | video_views_p75 / impressions | Qualidade do conteúdo (75%) |
+          | `play_rate` | video_plays / impressions | Taxa de play |
+          | `cta_rate` | clicks / video_views_p75 | Eficácia do CTA |
+
+          ### Métricas Calculadas — Atribuição de Vendas
+
+          | Métrica | Descrição |
+          |---------|-----------|
+          | `tx_revenue` | Faturamento atribuído |
+          | `tx_count` | Vendas aprovadas |
+          | `tx_count_total` | Vendas totais (inclui pendentes) |
+          | `tx_count_pending` | Vendas pendentes |
+          | `tx_count_refunded` | Reembolsos |
+          | `page_views` | Visualizações de página |
+          | `leads` | Cadastros/leads |
+          | `initiate_checkout` | Inícios de checkout |
+
+          ### Métricas Calculadas — Financeiro
+
+          | Métrica | Fórmula | Descrição |
+          |---------|---------|-----------|
+          | `roas` | tx_revenue / spend | Retorno sobre investimento em ads |
+          | `roi` | (tx_revenue - spend) / spend | ROI percentual |
+          | `profit` | tx_revenue - spend - tx_product_costs | Lucro líquido |
+          | `aov` | tx_revenue / tx_count | Ticket médio |
+          | `cpa` | spend / tx_count | Custo por aquisição |
+          | `cpl` | spend / leads | Custo por lead |
+
+          ## Granularidades
+
+          | Valor | Descrição |
+          |-------|-----------|
+          | `5min`, `10min`, `15min`, `30min` | Sub-horária (planos Growth/Enterprise) |
+          | `hour` | Horária |
+          | `day` | Diária |
+          | `week` | Semanal |
+          | `month` | Mensal |
+          | `quarter` | Trimestral |
+          | `year` | Anual |
+
+          Se a granularidade solicitada não tiver dados disponíveis, o sistema faz fallback automático para granularidades mais grossas (`raw → hourly → daily`).
+
+          ## Conversão de Moeda
+
+          A API converte automaticamente valores monetários para a moeda padrão do projeto. Para forçar uma moeda específica, use `metadata.convert_to_currency`.
+
+          Apenas campos monetários são convertidos (`spend`, `cpc`, `cpm`, `cpa`, `roas`, `profit`, `aov`, etc.). Campos como `clicks`, `impressions`, `ctr` não são afetados.
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+            examples:
+              aggregated:
+                summary: Totais agregados (sem breakdown)
+                value:
+                  project_id: 69162064162b926ae607959b
+                  fields:
+                    - spend
+                    - impressions
+                    - clicks
+                  time:
+                    start: "2026-02-01"
+                    end: "2026-02-08"
+              byCampaign:
+                summary: Por campanha com granularidade diária
+                value:
+                  project_id: 69162064162b926ae607959b
+                  fields:
+                    - spend
+                    - impressions
+                    - clicks
+                    - ctr
+                    - cpc
+                  time:
+                    start: "2026-02-01"
+                    end: "2026-02-08"
+                    granularity: day
+                  metadata:
+                    level: campaign
+              byAd:
+                summary: Por anúncio de uma plataforma
+                value:
+                  project_id: 69162064162b926ae607959b
+                  source: meta_ads
+                  fields:
+                    - spend
+                    - impressions
+                    - clicks
+                    - ctr
+                    - hook_rate
+                    - hold_rate
+                  time:
+                    start: "2026-02-08"
+                    end: "2026-02-08"
+                  metadata:
+                    level: ad
+              withCurrency:
+                summary: Com conversão de moeda explícita
+                value:
+                  project_id: 69162064162b926ae607959b
+                  fields:
+                    - spend
+                    - roas
+                    - tx_revenue
+                    - profit
+                  time:
+                    start: "2026-02-01"
+                    end: "2026-02-08"
+                  metadata:
+                    convert_to_currency: USD
+      responses:
+        "200":
+          description: Dados retornados com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResponse"
+              example:
+                success: true
+                data:
+                  - spend: 1250.75
+                    impressions: 45230
+                    clicks: 1205
+                    ctr: 0.0266
+                    cpc: 1.038
+                currency: BRL
+        "400":
+          description: Erro de validação na query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryError"
+              examples:
+                missingField:
+                  summary: Campo obrigatório ausente
+                  value:
+                    error: Validation Error
+                    errors:
+                      - project_id is required
+                invalidSource:
+                  summary: Source inválido
+                  value:
+                    error: Invalid Source
+                    message: "Unknown source: invalid. Valid sources: meta_ads, google_ads, tiktok_ads"
+        "401":
+          description: Credencial ausente, inválida, revogada ou expirada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Authentication failed
+                  message:
+                    type: string
+                    example: No token provided
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT or API Key
+      description: JWT da plataforma ou API key `mtk_live_...` enviada no header Authorization
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key `mtk_live_...` enviada via header `x-api-key`
+
+  parameters:
+    WorkspaceId:
+      name: X-Workspace-Id
+      in: header
+      required: false
+      description: Obrigatório quando usar JWT. Opcional quando usar API key (`mtk_live_...`)
+      schema:
+        type: string
+        example: 69162064162b926ae607959b
+
+  schemas:
+    QueryRequest:
+      type: object
+      required:
+        - project_id
+        - fields
+      properties:
+        project_id:
+          type: string
+          description: ID do projeto (brand) no Metrito
+          example: 69162064162b926ae607959b
+        fields:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: "Lista de métricas a consultar. Consulte `GET /v3/fields` para ver todas as opções."
+          example:
+            - spend
+            - impressions
+            - clicks
+            - ctr
+        source:
+          type: string
+          description: "Plataforma de anúncios. Omita para consultar todas."
+          enum:
+            - meta_ads
+            - google_ads
+            - tiktok_ads
+          example: meta_ads
+        connection_ids:
+          type: array
+          items:
+            type: string
+          description: IDs de conexões específicas. Omita para usar todas as conexões do projeto.
+        time:
+          $ref: "#/components/schemas/TimeRange"
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Filter"
+          description: Filtros para restringir os dados retornados
+        order:
+          type: object
+          additionalProperties:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: 'Ordenação dos resultados. Ex: `{ "spend": "desc" }`'
+          example:
+            spend: desc
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50000
+          description: Limite de resultados
+          example: 100
+        offset:
+          type: integer
+          minimum: 0
+          description: Offset para paginação
+        metadata:
+          $ref: "#/components/schemas/QueryMetadata"
+
+    TimeRange:
+      type: object
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          description: "Data inicial (YYYY-MM-DD ou ISO datetime)"
+          example: "2026-02-01"
+        end:
+          type: string
+          description: "Data final (YYYY-MM-DD ou ISO datetime)"
+          example: "2026-02-08"
+        granularity:
+          type: string
+          enum:
+            - 5min
+            - 10min
+            - 15min
+            - 30min
+            - hour
+            - day
+            - week
+            - month
+            - quarter
+            - year
+          description: "Granularidade temporal. Omita para retornar totais agregados sem breakdown."
+          example: day
+
+    Filter:
+      type: object
+      required:
+        - member
+        - operator
+      properties:
+        member:
+          type: string
+          description: Nome do campo a filtrar
+          example: campaign_id
+        operator:
+          type: string
+          enum:
+            - equals
+            - notEquals
+            - contains
+            - notContains
+            - startsWith
+            - endsWith
+            - gt
+            - gte
+            - lt
+            - lte
+            - set
+            - notSet
+          description: Operador de comparação
+          example: equals
+        values:
+          type: array
+          items:
+            type: string
+          description: "Valores para comparação (obrigatório exceto para `set`/`notSet`)"
+          example:
+            - "120239000000000"
+
+    QueryMetadata:
+      type: object
+      description: Opções adicionais da query
+      properties:
+        level:
+          type: string
+          enum:
+            - account
+            - campaign
+            - adset
+            - ad
+          description: "Nível de agrupamento hierárquico. Omita para retornar totais sem breakdown por entidade."
+          example: campaign
+        live:
+          type: boolean
+          description: Se `true`, força consulta em tempo real à API da plataforma (disponível em planos Growth+)
+          default: false
+        convert_to_currency:
+          type: string
+          description: "Forçar conversão para moeda específica (ISO 4217). Ignora a moeda padrão do projeto."
+          example: USD
+
+    QueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Resultados da query. Cada item contém as métricas solicitadas.
+        currency:
+          type: string
+          description: Moeda dos valores monetários na resposta
+          example: BRL
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Avisos sobre a query (granularidade indisponível, dados parciais, etc.)
+
+    QueryError:
+      type: object
+      properties:
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+
+    FieldsResponse:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/Field"
+        count:
+          type: integer
+          description: Total de campos retornados
+        source:
+          type: string
+          description: Identificador da fonte de campos
+          example: v3-ads
+        timestamp:
+          type: string
+          format: date-time
+
+    Field:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Identificador único do campo (usar na query)
+          example: spend
+        name:
+          type: string
+          description: Nome legível
+          example: Investimento
+        shortName:
+          type: string
+          description: Nome curto para tabelas
+          example: Invest.
+        description:
+          type: string
+          description: Descrição do campo
+        type:
+          type: string
+          enum:
+            - measure
+            - dimension
+          description: Tipo do campo
+        dataType:
+          type: string
+          description: "Tipo de dado (currency, percentage, number, string, etc.)"
+        displayType:
+          type: string
+          description: Como exibir o valor na UI
+        sourceKey:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+          description: "Plataformas que suportam este campo (meta_ads, google_ads, tiktok_ads)"
+        good_direction:
+          type: string
+          enum:
+            - up
+            - down
+          description: "Direção positiva do valor (up = maior é melhor, down = menor é melhor)"
+        available:
+          type: boolean
+        filterable:
+          type: boolean
+        sortable:
+          type: boolean

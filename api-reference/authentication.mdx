@@ -1,0 +1,130 @@
+---
+title: "Autenticação"
+description: "Como autenticar nas APIs do Metrito — JWT, API Keys e endpoints públicos"
+---
+
+O Metrito oferece diferentes métodos de autenticação dependendo da API e do caso de uso.
+
+## Métodos de Autenticação
+
+<CardGroup cols={2}>
+
+<Card title="API Key (Recomendado)" icon="key">
+  Chave de serviço com escopos granulares. Ideal para integrações, automações e acesso programático.
+</Card>
+
+<Card title="JWT Token" icon="lock">
+  Token obtido via login com e-mail e senha. Usado para integrações que precisam de contexto de usuário.
+</Card>
+
+</CardGroup>
+
+---
+
+## API Key (Chave de Serviço)
+
+API Keys são a forma recomendada de autenticação para integrações. Têm escopos granulares, não expiram (a menos que configurado) e não dependem de sessão de usuário.
+
+### Formato
+
+Todas as API Keys seguem o formato `mtk_live_...` e podem ser enviadas de duas formas:
+
+```bash
+# Via header Authorization
+curl -X POST https://data.metrito.com/v3/query \
+  -H "Authorization: Bearer mtk_live_abc123..."
+
+# Via header x-api-key
+curl -X POST https://data.metrito.com/v3/query \
+  -H "x-api-key: mtk_live_abc123..."
+```
+
+<Info>Ao usar API Key, **não é necessário** enviar o header `X-Workspace-Id` — o workspace é resolvido automaticamente pela chave.</Info>
+
+### Como criar uma API Key
+
+<Steps>
+
+<Step title="Acesse as Configurações">
+  Na plataforma Metrito, clique no menu lateral e acesse **Configurações** (ícone de engrenagem).
+</Step>
+
+<Step title="Vá até Chaves de API">
+  Na página de configurações, selecione a aba **Chaves de API**.
+</Step>
+
+<Step title="Crie uma nova chave">
+  Clique em **Criar chave de API** e preencha:
+  - **Nome**: identificador para referência (ex: "n8n Produção", "Meu Dashboard")
+  - **Escopos**: permissões que a chave terá
+  - **Expiração**: nunca, 30 dias, 90 dias ou 1 ano
+</Step>
+
+<Step title="Copie o token">
+  Após a criação, copie o token imediatamente. **Ele não será exibido novamente** por segurança.
+</Step>
+
+</Steps>
+
+### Escopos Disponíveis
+
+| Escopo | Descrição |
+|--------|-----------|
+| `data:read` | Consultar métricas via Data API (`POST /v3/query`, `GET /v3/fields`) |
+| `data:write` | Escrita de dados na Data API |
+| `tracking:write` | Enviar eventos de rastreamento |
+| `events:read` | Leitura de eventos |
+| `events:write` | Escrita de eventos |
+| `container:read` | Leitura de containers de rastreamento |
+| `decode:read` | Leitura de decode messages |
+
+<Warning>Selecione apenas os escopos necessários para sua integração. Chaves com menos permissões são mais seguras.</Warning>
+
+---
+
+## JWT Token (Login)
+
+Para obter um JWT, use o endpoint de [login](/api-reference/platform/post-v3-auth-login):
+
+```bash
+curl -X POST https://api.metrito.com/v3/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "seu@email.com", "password": "suaSenha" }'
+```
+
+A resposta contém o `token` JWT:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "60f1b2c3d4e5f6a7b8c9d0e1",
+    "name": "João Silva",
+    "email": "seu@email.com",
+    "role": "owner"
+  }
+}
+```
+
+Use o token nas requisições autenticadas:
+
+```bash
+curl -X GET https://api.metrito.com/v3/projects \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+<Note>O JWT expira em **7 dias**. Para integrações de longa duração, use API Keys.</Note>
+
+---
+
+## Resumo por API
+
+| API | Endpoint | Autenticação |
+|-----|----------|--------------|
+| **Rastreamento** | `POST /v2/public/tracking/events` | Nenhuma (público) |
+| **Rastreamento** | `POST /v2/tracking/generic?k={chave}` | Query param `k` |
+| **Plataforma** | `POST /v3/auth/login` | Nenhuma (retorna JWT) |
+| **Plataforma** | `GET /v3/projects` | JWT |
+| **Plataforma** | `GET /v3/projects/{id}/connections` | JWT |
+| **Dados** | `GET /v3/fields` | Nenhuma (público) |
+| **Dados** | `POST /v3/query` | JWT + `X-Workspace-Id` **ou** API Key `mtk_live_*` |

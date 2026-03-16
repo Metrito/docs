@@ -4,28 +4,23 @@ description: "Envie eventos de rastreamento pelo servidor a partir de qualquer p
 icon: "terminal"
 ---
 
-## Visão Geral
+A API de Eventos é um endpoint público que permite enviar eventos de rastreamento a partir de qualquer sistema — backends, ferramentas de automação (n8n, Make, Zapier), plataformas de e-commerce ou integrações personalizadas. Não exige autenticação e gera IDs automaticamente quando necessário.
 
-A API de Eventos é um endpoint REST público para enviar eventos de rastreamento a partir de qualquer sistema backend — plataformas de e-commerce, CRMs, ferramentas de automação (n8n, Make, Zapier) ou aplicações personalizadas.
+## Endpoint
 
 ```
-POST /v2/public/tracking/events
+POST https://api.metrito.com/v2/public/tracking/events
 ```
 
-| Propriedade | Valor |
-|-------------|-------|
-| **Método** | POST |
+| Propriedade      | Valor                      |
+| ---------------- | -------------------------- |
+| **Método**       | POST                       |
 | **Autenticação** | Nenhuma (endpoint público) |
-| **Content-Type** | `application/json` |
-| **URL Base** | `https://api.metrito.com` |
+| **Content-Type** | `application/json`         |
 
-<Info>
-A API é pública e não exige autenticação. O campo `domain` no payload identifica o contêiner de destino. Os eventos são processados de forma assíncrona — a API responde imediatamente após receber o evento.
-</Info>
+## Campos Obrigatórios
 
-## Schema da Requisição
-
-### Campos Obrigatórios
+Toda requisição precisa de apenas dois campos:
 
 ```json
 {
@@ -36,132 +31,34 @@ A API é pública e não exige autenticação. O campo `domain` no payload ident
 }
 ```
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `domain` | string | Domínio associado ao seu contêiner de rastreamento (ex: `sujaloja.com.br`) ou o ID MTC (ex: `MTC-5X35GWQ`) |
-| `config.name` | string | Nome do evento para dashboards e relatórios no Metrito |
+| Campo         | Descrição                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| `domain`      | Domínio do seu contêiner de rastreamento (ex: `sujaloja.com.br`) ou ID MTC (ex: `MTC-5X35GWQ`) |
+| `config.name` | Nome do evento para dashboards e relatórios no Metrito                                         |
 
-### Campos Opcionais
+## Exemplo Rápido
 
-```json
-{
-  "domain": "sujaloja.com.br",
-  "eventId": "meu_evento_123",
-  "eventTime": 1700000000,
-  "config": {
-    "name": "Compra",
-    "facebook": {
-      "name": "Purchase"
+```bash
+curl -X POST https://api.metrito.com/v2/public/tracking/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "sujaloja.com.br",
+    "config": {
+      "name": "Purchase",
+      "facebook": { "name": "Purchase" }
+    },
+    "data": {
+      "value": 99.90,
+      "currency": "BRL"
+    },
+    "lead": {
+      "email": "cliente@exemplo.com",
+      "phone": "+5511999999999"
     }
-  },
-  "data": {
-    "value": 299.90,
-    "currency": "BRL"
-  },
-  "lead": {
-    "id": "lead_20250920_abc123",
-    "name": "João Silva",
-    "email": "joao@exemplo.com",
-    "phone": "+5511999999999"
-  },
-  "utm": {
-    "utm_source": "facebook",
-    "utm_medium": "cpc",
-    "utm_campaign": "Promoção Verão|123456789",
-    "utm_content": "Vídeo Ad|456789",
-    "utm_term": "feed"
-  },
-  "meta": {
-    "url": "https://sujaloja.com.br/checkout/sucesso",
-    "title": "Pedido Confirmado",
-    "language": "pt-BR",
-    "referrer": "https://sujaloja.com.br/carrinho"
-  },
-  "cookies": {
-    "_fbp": "fb.1.1234567890.987654321",
-    "_ga": "GA1.2.1234567890.1234567890"
-  }
-}
+  }'
 ```
 
-### Referência dos Campos
-
-<ResponseField name="domain" type="string" required>
-  Domínio associado ao seu contêiner, ou o ID MTC (ex: `MTC-5X35GWQ`).
-</ResponseField>
-
-<ResponseField name="config" type="object" required>
-  <Expandable title="config">
-    <ResponseField name="name" type="string" required>
-      Nome do evento para o Metrito. Pode ser qualquer string que faça sentido para você (ex: `Lead`, `Compra`, `FormularioEnviado`).
-    </ResponseField>
-    <ResponseField name="facebook" type="object">
-      <Expandable title="facebook">
-        <ResponseField name="name" type="string">
-          Nome do evento enviado para a API de Conversões da Meta. Deve seguir os eventos padrão da Meta: `PageView`, `Lead`, `Purchase`, `AddToCart`, `InitiateCheckout`, `AddPaymentInfo`, `CompleteRegistration`.
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-<ResponseField name="eventId" type="string">
-  ID único do evento. Gerado automaticamente como `{timestamp}_{aleatorio}` se omitido (ex: `1758388123_kk78h7u5sf`).
-</ResponseField>
-
-<ResponseField name="eventTime" type="number">
-  Timestamp Unix do evento. Usa o horário atual se omitido.
-</ResponseField>
-
-<ResponseField name="data" type="object">
-  <Expandable title="data">
-    <ResponseField name="value" type="number">
-      Valor monetário do evento (ex: `299.90`).
-    </ResponseField>
-    <ResponseField name="currency" type="string">
-      Código de moeda ISO 4217 (ex: `BRL`, `USD`).
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-<ResponseField name="lead" type="object">
-  <Expandable title="lead">
-    <ResponseField name="id" type="string">
-      ID explícito do lead. Gerado automaticamente como `lead_{AAAAMMDD}_{aleatorio}` se omitido quando dados de lead estão presentes.
-    </ResponseField>
-    <ResponseField name="name" type="string">Nome completo do lead.</ResponseField>
-    <ResponseField name="email" type="string">Endereço de e-mail do lead.</ResponseField>
-    <ResponseField name="phone" type="string">Telefone no formato E.164 (ex: `+5511999999999`).</ResponseField>
-  </Expandable>
-</ResponseField>
-
-<ResponseField name="utm" type="object">
-  <Expandable title="utm">
-    <ResponseField name="utm_source" type="string">Fonte (ex: `facebook`, `google`)</ResponseField>
-    <ResponseField name="utm_medium" type="string">Meio (ex: `cpc`, `email`)</ResponseField>
-    <ResponseField name="utm_campaign" type="string">Campanha (suporta formato `nome|id`)</ResponseField>
-    <ResponseField name="utm_content" type="string">Conteúdo (suporta formato `nome|id`)</ResponseField>
-    <ResponseField name="utm_term" type="string">Termo ou posicionamento.</ResponseField>
-  </Expandable>
-</ResponseField>
-
-<ResponseField name="meta" type="object">
-  <Expandable title="meta">
-    <ResponseField name="url" type="string">URL da página onde o evento ocorreu</ResponseField>
-    <ResponseField name="title" type="string">Título da página</ResponseField>
-    <ResponseField name="language" type="string">Idioma da página</ResponseField>
-    <ResponseField name="referrer" type="string">URL de referência</ResponseField>
-  </Expandable>
-  Preenchido automaticamente quando o evento é enviado pelo navegador. Quando enviado pelo servidor, inclua esses dados explicitamente se disponíveis.
-</ResponseField>
-
-<ResponseField name="cookies" type="object">
-  Cookies do navegador para correspondência nas plataformas de anúncios. Chaves mais comuns: `_fbp` (Meta), `_ga` (Google Analytics), `_fbc` (clique Meta).
-</ResponseField>
-
-## Resposta
-
-### Sucesso (200 OK)
+Resposta de sucesso:
 
 ```json
 {
@@ -172,152 +69,32 @@ A API é pública e não exige autenticação. O campo `domain` no payload ident
 }
 ```
 
-### Erro de Validação (400)
-
-```json
-{
-  "message": "Domain is required",
-  "errors": [
-    { "field": "domain", "message": "Domain field is required" }
-  ]
-}
-```
-
-## Exemplos de Código
-
-<CodeGroup>
-
-```bash cURL
-curl -X POST https://api.metrito.com/v2/public/tracking/events \
-  -H "Content-Type: application/json" \
-  -d '{
-    "domain": "sujaloja.com.br",
-    "config": {
-      "name": "Compra",
-      "facebook": { "name": "Purchase" }
-    },
-    "data": {
-      "value": 299.90,
-      "currency": "BRL"
-    },
-    "lead": {
-      "email": "cliente@exemplo.com",
-      "phone": "+5511999999999"
-    }
-  }'
-```
-
-```javascript JavaScript (fetch)
-const response = await fetch(
-  "https://api.metrito.com/v2/public/tracking/events",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      domain: "sujaloja.com.br",
-      config: {
-        name: "Lead",
-        facebook: { name: "Lead" },
-      },
-      lead: {
-        name: "Maria Santos",
-        email: "maria@exemplo.com",
-        phone: "+5511999999999",
-      },
-      utm: {
-        utm_source: "facebook",
-        utm_campaign: "Black Friday|123456",
-      },
-    }),
-  }
-);
-
-const resultado = await response.json();
-console.log(resultado.eventId, resultado.leadId);
-```
-
-```javascript n8n (Nó HTTP Request)
-// Configuração do nó HTTP Request:
-// Método: POST
-// URL: https://api.metrito.com/v2/public/tracking/events
-// Body Content Type: JSON
-// Body:
-{
-  "domain": "sujaloja.com.br",
-  "config": {
-    "name": "{{ $json.nomeEvento }}",
-    "facebook": {
-      "name": "{{ $json.nomeEventoFacebook }}"
-    }
-  },
-  "data": {
-    "value": "{{ $json.valorPedido }}",
-    "currency": "BRL"
-  },
-  "lead": {
-    "name": "{{ $json.nomeCliente }}",
-    "email": "{{ $json.emailCliente }}",
-    "phone": "{{ $json.telefoneCliente }}"
-  }
-}
-```
-
-```python Python (requests)
-import requests
-
-resposta = requests.post(
-    "https://api.metrito.com/v2/public/tracking/events",
-    json={
-        "domain": "sujaloja.com.br",
-        "config": {
-            "name": "Compra",
-            "facebook": {"name": "Purchase"},
-        },
-        "data": {"value": 299.90, "currency": "BRL"},
-        "lead": {
-            "email": "cliente@exemplo.com",
-            "phone": "+5511999999999",
-        },
-    },
-)
-
-print(resposta.json())
-```
-
-</CodeGroup>
+<Info>O `eventId` e o `leadId` são gerados automaticamente quando não enviados. Você não precisa gerenciar esses IDs manualmente.</Info>
 
 ## config.name vs config.facebook.name
 
-Esses campos têm finalidades distintas e ambos devem ser incluídos quando você quer encaminhar eventos para a Meta:
+Esses dois campos têm finalidades distintas:
 
-| Campo | Utilizado por | Finalidade |
-|-------|---------------|------------|
-| `config.name` | **Metrito** | Nome interno do evento para dashboards. Use qualquer nome que quiser. |
-| `config.facebook.name` | **API de Conversões da Meta** | Deve corresponder a um evento padrão da Meta. |
+| Campo                  | Usado por                     | Descrição                                                                                                              |
+| ---------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `config.name`          | **Metrito**                   | Nome interno do evento para dashboards. Use qualquer nome que quiser.                                                  |
+| `config.facebook.name` | **Meta (Facebook/Instagram)** | Nome do evento enviado à API de Conversões da Meta. Deve seguir o padrão oficial (ex: `Purchase`, `Lead`, `PageView`). |
 
 <Warning>
-Se `config.facebook` for omitido, o evento é registrado no Metrito mas **não** é enviado para a Meta. Inclua-o sempre que quiser atribuição no Meta Ads.
+  Se `config.facebook` for omitido, o evento é registrado no Metrito mas **não** é enviado para a Meta. Inclua-o sempre que quiser
+  atribuição no Meta Ads.
 </Warning>
-
-## IP e Geolocalização
-
-| Enviado de | Detecção de IP | Geolocalização |
-|------------|---------------|----------------|
-| **Navegador** (frontend) | Automática via cabeçalhos da requisição | Automática pelo IP do usuário |
-| **Servidor** (backend) | IP do servidor | Localização do servidor |
-
-Ao enviar eventos de um backend, a geolocalização refletirá a localização do seu servidor, não a do usuário. Se disponível, inclua os dados de localização do usuário explicitamente no objeto `meta`.
 
 ## Próximos Passos
 
 <CardGroup cols={2}>
 
-<Card title="Testar a Integração" icon="bug" href="/tracking/testing">
-  Verifique se os eventos estão sendo recebidos e processados corretamente.
+<Card title="Referência de API" icon="book" href="/api-reference/events">
+  Documentação completa de todos os campos, geração de IDs, geolocalização, exemplos de código e FAQ.
 </Card>
 
-<Card title="Configuração de UTMs" icon="bullseye-arrow" href="/tracking/utm-configuration">
-  Configure os parâmetros das plataformas de anúncios para atribuição.
+<Card title="Testar a Integração" icon="bug" href="/tracking/testing">
+  Verifique se os eventos estão sendo recebidos e processados corretamente.
 </Card>
 
 </CardGroup>
