@@ -86,8 +86,21 @@ paths:
       x-mint:
         metadata:
           title: Listar Projetos
+        content: |
+          ## Autenticação
+
+          Este endpoint aceita dois formatos de autenticação:
+
+          1. **JWT da plataforma**
+             - Header: `Authorization: Bearer {jwt}`
+
+          2. **API Key do Metrito**
+             - Header: `Authorization: Bearer mtk_live_...` **ou** `x-api-key: mtk_live_...`
+             - Requer escopo `data:read`
+             - Retorna todos os projetos do workspace vinculado à chave
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
       responses:
         "200":
           description: Lista de projetos retornada com sucesso
@@ -129,8 +142,21 @@ paths:
       x-mint:
         metadata:
           title: Listar Conexões
+        content: |
+          ## Autenticação
+
+          Este endpoint aceita dois formatos de autenticação:
+
+          1. **JWT da plataforma**
+             - Header: `Authorization: Bearer {jwt}`
+
+          2. **API Key do Metrito**
+             - Header: `Authorization: Bearer mtk_live_...` **ou** `x-api-key: mtk_live_...`
+             - Requer escopo `data:read`
+             - O projeto deve pertencer ao workspace vinculado à chave
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
       parameters:
         - name: project_id
           in: path
@@ -185,8 +211,13 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: Token JWT obtido via POST /v3/auth/login
+      bearerFormat: JWT or API Key
+      description: JWT da plataforma ou API key `mtk_live_...` enviada no header Authorization
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key `mtk_live_...` enviada via header `x-api-key`
 
   schemas:
     LoginRequest:

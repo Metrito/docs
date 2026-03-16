@@ -124,7 +124,7 @@ curl -X GET https://api.metrito.com/v3/projects \
 | **Rastreamento** | `POST /v2/public/tracking/events` | Nenhuma (público) |
 | **Rastreamento** | `POST /v2/tracking/generic?k={chave}` | Query param `k` |
 | **Plataforma** | `POST /v3/auth/login` | Nenhuma (retorna JWT) |
-| **Plataforma** | `GET /v3/projects` | JWT |
-| **Plataforma** | `GET /v3/projects/{id}/connections` | JWT |
+| **Plataforma** | `GET /v3/projects` | JWT **ou** API Key `mtk_live_*` (`data:read`) |
+| **Plataforma** | `GET /v3/projects/{id}/connections` | JWT **ou** API Key `mtk_live_*` (`data:read`) |
 | **Dados** | `GET /v3/fields` | Nenhuma (público) |
 | **Dados** | `POST /v3/query` | JWT + `X-Workspace-Id` **ou** API Key `mtk_live_*` |
