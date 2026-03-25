@@ -70,13 +70,10 @@ curl -X POST https://data.metrito.com/v3/query \
 
 | Escopo | Descrição |
 |--------|-----------|
-| `data:read` | Consultar métricas via Data API (`POST /v3/query`, `GET /v3/fields`) |
-| `data:write` | Escrita de dados na Data API |
-| `tracking:write` | Enviar eventos de rastreamento |
-| `events:read` | Leitura de eventos |
-| `events:write` | Escrita de eventos |
-| `container:read` | Leitura de containers de rastreamento |
-| `decode:read` | Leitura de decode messages |
+| `tracking:read` | Leitura de containers, eventos, decode messages (`GET /v3/tracking/*`) |
+| `tracking:write` | Enviar eventos de rastreamento, criar/editar conversões (`POST /v3/tracking/*`) |
+| `data:read` | Consultar métricas via Data API (`POST /v3/query`, `GET /v3/fields`, `GET /v3/connections/*`) |
+| `data:write` | Escrita de dados na Data API (reservado para uso futuro) |
 
 <Warning>Selecione apenas os escopos necessários para sua integração. Chaves com menos permissões são mais seguras.</Warning>
 
@@ -121,10 +118,17 @@ curl -X GET https://api.metrito.com/v3/projects \
 
 | API | Endpoint | Autenticação |
 |-----|----------|--------------|
-| **Rastreamento** | `POST /v2/public/tracking/events` | Nenhuma (público) |
-| **Rastreamento** | `POST /v2/tracking/generic?k={chave}` | Query param `k` |
 | **Plataforma** | `POST /v3/auth/login` | Nenhuma (retorna JWT) |
-| **Plataforma** | `GET /v3/projects` | JWT **ou** API Key `mtk_live_*` (`data:read`) |
-| **Plataforma** | `GET /v3/projects/{id}/connections` | JWT **ou** API Key `mtk_live_*` (`data:read`) |
+| **Plataforma** | `GET /v3/projects` | JWT **ou** API Key (`data:read`) |
+| **Plataforma** | `GET /v3/projects/{id}/connections` | JWT **ou** API Key (`data:read`) |
+| **Plataforma** | `GET /v3/connections/{id}/sync` | JWT **ou** API Key (`data:read`) |
+| **Plataforma** | `PUT /v3/connections/{id}/objects` | JWT **ou** API Key (`data:write`) |
+| **Rastreamento** | `GET /v3/tracking/containers/{id}` | API Key (`tracking:read`) |
+| **Rastreamento** | `GET /v3/tracking/containers/{id}/triggers` | API Key (`tracking:read`) |
+| **Rastreamento** | `POST /v3/tracking/containers/{id}/triggers` | API Key (`tracking:write`) |
+| **Rastreamento** | `PUT/DELETE /v3/tracking/containers/{id}/triggers/{triggerId}` | API Key (`tracking:write`) |
+| **Rastreamento** | `POST /v3/tracking/events` | API Key **ou** Nenhuma (dual-mode) |
+| **Rastreamento** | `POST /v3/tracking/messages/decode` | API Key (`tracking:read`) |
+| **Rastreamento** | `POST /v2/tracking/generic?k={chave}` | Query param `k` |
 | **Dados** | `GET /v3/fields` | Nenhuma (público) |
-| **Dados** | `POST /v3/query` | JWT + `X-Workspace-Id` **ou** API Key `mtk_live_*` |
+| **Dados** | `POST /v3/query` | JWT + `X-Workspace-Id` **ou** API Key |

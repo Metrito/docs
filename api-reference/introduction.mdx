@@ -21,6 +21,14 @@ A maioria dos endpoints exige autenticação. Veja a [página de autenticação]
 - **JWT** — obtido via `POST /v3/auth/login` com e-mail e senha.
 - **Públicos** — `POST /v2/public/tracking/events` e `GET /v3/fields` não exigem autenticação.
 
+## Infraestrutura
+
+Toda requisição à API v3 retorna:
+
+- **`X-Request-Id`** — ID único para rastreamento e suporte
+- **`X-RateLimit-*`** — Headers de rate limiting ([ver detalhes](/api-reference/rate-limits))
+- **Formato de erro padronizado** — Códigos máquina-legíveis em todas as respostas de erro
+
 ## APIs
 
 <CardGroup cols={3}>

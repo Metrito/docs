@@ -1,0 +1,121 @@
+---
+title: "Rate Limits"
+description: "Limites de requisição, headers e como lidar com throttling"
+---
+
+Todas as rotas do Metrito possuem rate limiting para garantir estabilidade e uso justo da plataforma.
+
+## Limites por Tier
+
+| Tier | Limite | Janela |
+|------|--------|--------|
+| API Key padrão | 120 req | 1 minuto |
+| Growth | 300 req | 1 minuto |
+| Enterprise | 1.000 req | 1 minuto |
+
+## Headers de Resposta
+
+Toda resposta das rotas `/v3/` inclui headers de rate limit:
+
+| Header | Descrição |
+|--------|-----------|
+| `X-RateLimit-Limit` | Limite máximo de requisições na janela |
+| `X-RateLimit-Remaining` | Requisições restantes na janela atual |
+| `X-RateLimit-Reset` | Timestamp Unix de quando a janela reseta |
+| `Retry-After` | Segundos até poder tentar novamente (apenas em 429) |
+
+## Lidando com Rate Limiting
+
+Quando o limite é excedido, a API retorna `429 Too Many Requests`:
+
+```json
+{
+  "error": {
+    "type": "rate_limit_error",
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Maximum 120 requests per 60s.",
+    "request_id": "req_abc123"
+  }
+}
+```
+
+**Recomendações:**
+
+1. Respeite o header `Retry-After` antes de tentar novamente
+2. Implemente backoff exponencial para retries
+3. Agrupe múltiplas consultas em uma única chamada quando possível (ex: multiple fields em `POST /v3/query`)
+4. Cache respostas que não mudam frequentemente (`GET /v3/fields`)
+
+---
+
+## Request ID
+
+Toda resposta inclui o header `X-Request-Id`. Use este ID ao entrar em contato com o suporte.
+
+```
+X-Request-Id: req_k8mN2pQ4rT6wX1
+```
+
+---
+
+## Idempotência
+
+Endpoints de escrita (`POST /v3/tracking/events`, `POST /v3/tracking/containers/:id/events`) suportam o header `Idempotency-Key`.
+
+```bash
+curl -X POST https://api.metrito.com/v3/tracking/events \
+  -H "Authorization: Bearer mtk_live_abc123..." \
+  -H "Idempotency-Key: meu-evento-unico-123" \
+  -H "Content-Type: application/json" \
+  -d '{ "config": { "name": "Purchase" } }'
+```
+
+| Comportamento | Descrição |
+|---------------|-----------|
+| Primeira chamada | Processa normalmente e armazena resultado |
+| Chamada repetida (mesmo key, 24h) | Retorna resultado armazenado com header `X-Idempotent-Replayed: true` |
+| Após 24h | Key expira, chamada é processada novamente |
+
+<Warning>O `Idempotency-Key` é vinculado à API key. Chaves diferentes podem usar o mesmo valor sem conflito.</Warning>
+
+---
+
+## Formato de Erro Padronizado
+
+Todas as rotas `/v3/` retornam erros no formato:
+
+```json
+{
+  "error": {
+    "type": "authentication_error",
+    "code": "invalid_api_key",
+    "message": "The API key provided is invalid or has been revoked.",
+    "request_id": "req_abc123"
+  }
+}
+```
+
+### Tipos de Erro
+
+| Tipo | HTTP Status | Descrição |
+|------|-------------|-----------|
+| `authentication_error` | 401 | Credencial ausente, inválida ou expirada |
+| `authorization_error` | 403 | Permissão insuficiente (escopo) |
+| `validation_error` | 400 | Parâmetro ausente ou inválido |
+| `not_found_error` | 404 | Recurso não encontrado |
+| `rate_limit_error` | 429 | Limite de requisições excedido |
+| `api_error` | 500 | Erro interno do servidor |
+
+### Códigos de Erro
+
+| Código | Descrição |
+|--------|-----------|
+| `invalid_api_key` | API key inválida ou revogada |
+| `expired_api_key` | API key expirada |
+| `insufficient_scope` | API key não possui o escopo necessário |
+| `rate_limit_exceeded` | Limite de requisições excedido |
+| `invalid_parameter` | Parâmetro de request inválido |
+| `missing_parameter` | Parâmetro obrigatório ausente |
+| `resource_not_found` | Recurso não encontrado |
+| `idempotency_conflict` | Conflito de idempotência |
+| `internal_error` | Erro interno |

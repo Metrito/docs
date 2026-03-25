@@ -36,7 +36,7 @@
           {
             "group": "Visão Geral",
             "icon": "book",
-            "pages": ["api-reference/introduction", "api-reference/authentication"]
+            "pages": ["api-reference/introduction", "api-reference/authentication", "api-reference/rate-limits"]
           },
           {
             "group": "Plataforma",
@@ -44,13 +44,46 @@
             "pages": [
               "openapi/platform.yaml POST /v3/auth/login",
               "openapi/platform.yaml GET /v3/projects",
-              "openapi/platform.yaml GET /v3/projects/{project_id}/connections"
+              "openapi/platform.yaml GET /v3/projects/{project_id}/connections",
+              "openapi/data.yaml GET /v3/connections/{connectionId}/sync",
+              "openapi/platform.yaml PUT /v3/connections/{connectionId}/objects"
             ]
           },
           {
             "group": "API de Rastreamento",
             "icon": "satellite-dish",
-            "pages": ["openapi/tracking.yaml POST /v2/public/tracking/events", "openapi/tracking.yaml POST /v2/tracking/generic"]
+            "pages": [
+              {
+                "group": "Containers",
+                "icon": "box",
+                "pages": ["openapi/tracking.yaml GET /v3/tracking/containers/{containerId}"]
+              },
+              {
+                "group": "Gatilhos",
+                "icon": "bolt",
+                "pages": [
+                  "openapi/tracking.yaml GET /v3/tracking/containers/{containerId}/triggers",
+                  "openapi/tracking.yaml POST /v3/tracking/containers/{containerId}/triggers",
+                  "openapi/tracking.yaml PUT /v3/tracking/containers/{containerId}/triggers/{triggerId}",
+                  "openapi/tracking.yaml DELETE /v3/tracking/containers/{containerId}/triggers/{triggerId}"
+                ]
+              },
+              {
+                "group": "Eventos",
+                "icon": "arrow-right-from-bracket",
+                "pages": ["openapi/tracking.yaml POST /v3/tracking/events"]
+              },
+              {
+                "group": "Pedidos",
+                "icon": "cart-shopping",
+                "pages": ["openapi/tracking.yaml POST /v2/tracking/generic"]
+              },
+              {
+                "group": "Mensagens",
+                "icon": "message-lines",
+                "pages": ["openapi/tracking.yaml POST /v3/tracking/messages/decode"]
+              }
+            ]
           },
           {
             "group": "API de Dados",
@@ -91,7 +124,7 @@
   },
   "footer": {
     "socials": {
-      "instagram": "https://instagram.com/metrito.io",
+      "instagram": "https://instagram.com/metrito.com.br",
       "linkedin": "https://linkedin.com/company/metrito"
     }
   }

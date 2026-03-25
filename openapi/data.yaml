@@ -6,6 +6,13 @@ info:
     API para consulta de métricas de anúncios sincronizadas das plataformas (Meta Ads, Google Ads, TikTok Ads).
     Os dados são sincronizados automaticamente em background e ficam disponíveis para consulta via esta API.
 
+    ## Novidades na v3
+
+    - Endpoints de conexão sob `/v3/connections/:id/` (entidades, sync)
+    - Rate limiting com headers `X-RateLimit-*`
+    - Request ID via `X-Request-Id` em todas as respostas
+    - Formato de erro padronizado
+
 servers:
   - url: https://data.metrito.com
     description: Produção
@@ -301,6 +308,137 @@ paths:
                   message:
                     type: string
                     example: No token provided
+
+  /v3/connections/{connectionId}/entities:
+    get:
+      operationId: getConnectionEntities
+      summary: Obter árvore de entidades de uma conexão
+      description: |
+        Retorna a árvore hierárquica de entidades (campanhas, conjuntos de anúncios, anúncios) de uma conexão.
+        Os dados vêm do cache local. Use `?live=true` para forçar busca ao vivo na API da plataforma.
+      x-mint:
+        metadata:
+          title: Entidades da Conexão
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          description: ID da conexão
+          schema:
+            type: string
+        - name: live
+          in: query
+          required: false
+          description: "`true` para buscar dados ao vivo da API da plataforma (mais lento)"
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+      responses:
+        "200":
+          description: Entidades retornadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection_id:
+                    type: string
+                  mode:
+                    type: string
+                    enum: [cache, live]
+                  entities:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          status:
+                            type: string
+                  total:
+                    type: integer
+        "401":
+          description: Credencial inválida
+
+  /v3/connections/{connectionId}/sync:
+    get:
+      operationId: getConnectionSync
+      summary: Verificar atualização dos dados de uma conexão
+      description: |
+        Retorna quando os dados de uma conexão foram atualizados pela última vez, o histórico recente de sincronizações e a estimativa do próximo ciclo de atualização.
+
+        Use este endpoint para saber se os dados retornados por `POST /v3/query` já refletem o período mais recente.
+      x-mint:
+        metadata:
+          title: Atualização da Conexão
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          description: ID da conexão
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Status de sync retornado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection_id:
+                    type: string
+                  last_sync:
+                    type: object
+                    nullable: true
+                    properties:
+                      completed_at:
+                        type: string
+                        format: date-time
+                      rows_synced:
+                        type: integer
+                      sync_type:
+                        type: string
+                  history:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        sync_type:
+                          type: string
+                        status:
+                          type: string
+                        started_at:
+                          type: string
+                        completed_at:
+                          type: string
+                  schedule:
+                    type: object
+                    nullable: true
+                    properties:
+                      tier:
+                        type: string
+                      sync_interval_minutes:
+                        type: integer
+                      next_sync_estimate:
+                        type: string
+                      remaining_seconds:
+                        type: integer
+        "401":
+          description: Credencial inválida
 
 components:
   securitySchemes:
